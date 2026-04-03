@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, portfolios, positions
+from app.routers import auth, portfolios, positions, strategies
 
 app = FastAPI(title="Options Strategy Tool")
 
@@ -22,3 +22,4 @@ def health() -> dict[str, str]:
 app.include_router(auth.router)
 app.include_router(portfolios.router)
 app.include_router(positions.router)
+app.include_router(strategies.router)
