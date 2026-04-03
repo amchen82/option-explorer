@@ -72,6 +72,7 @@ export interface Alert {
 
 export interface StrategiesResponse {
   symbol: string;
+  reference_price: number;
   position: { symbol: string; shares: number; cost_basis: number; cash?: number };
   income: StrategyResult[];
   hedge: StrategyResult[];

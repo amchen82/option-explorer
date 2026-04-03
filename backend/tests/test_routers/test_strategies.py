@@ -96,6 +96,7 @@ def test_get_strategies_for_position(client, portfolio_with_position):
     assert "income" in body
     assert "hedge" in body
     assert "alerts" in body
+    assert body["reference_price"] == MOCK_MARKET_DATA["price"]
     assert len(body["income"]) > 0
 
 
@@ -105,6 +106,36 @@ def test_strategies_require_auth(client, portfolio_with_position):
     response = client.get(f"/strategies/{portfolio_id}/AAPL")
 
     assert response.status_code == 422
+
+
+def test_public_strategies_allow_guest_access(client):
+    with patch("app.services.market_data.MarketDataService.get_stock_quote", return_value=MOCK_MARKET_DATA), patch(
+        "app.services.market_data.MarketDataService.get_market_signals",
+        return_value=MOCK_SIGNALS,
+    ):
+        response = client.get("/strategies/public/AAPL")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["symbol"] == "AAPL"
+    assert body["reference_price"] == MOCK_MARKET_DATA["price"]
+    assert body["position"]["shares"] == 100.0
+    assert body["position"]["cost_basis"] == MOCK_MARKET_DATA["price"]
+    assert len(body["income"]) > 0
+    assert len(body["hedge"]) > 0
+
+
+def test_public_strategies_allow_custom_guest_position(client):
+    with patch("app.services.market_data.MarketDataService.get_stock_quote", return_value=MOCK_MARKET_DATA), patch(
+        "app.services.market_data.MarketDataService.get_market_signals",
+        return_value=MOCK_SIGNALS,
+    ):
+        response = client.get("/strategies/public/AAPL?shares=250&cost_basis=160")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["position"]["shares"] == 250.0
+    assert body["position"]["cost_basis"] == 160.0
 
 
 def test_strategies_unknown_symbol(client, portfolio_with_position):

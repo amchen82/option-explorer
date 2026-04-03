@@ -44,5 +44,14 @@ export const api = {
   strategies: {
     get: (portfolioId: number, symbol: string, token: string) =>
       apiFetch(`/strategies/${portfolioId}/${symbol}`, {}, token),
+    getPublic: (symbol: string, shares = 100, costBasis?: number) => {
+      const params = new URLSearchParams({ shares: shares.toString() });
+
+      if (typeof costBasis === "number" && !Number.isNaN(costBasis)) {
+        params.set("cost_basis", costBasis.toString());
+      }
+
+      return apiFetch(`/strategies/public/${symbol}?${params.toString()}`);
+    },
   },
 };

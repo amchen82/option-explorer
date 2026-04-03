@@ -15,7 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_36%),linear-gradient(180deg,_#08111f_0%,_#030712_100%)] text-slate-100 antialiased">
+      <body className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.14),_transparent_34%),linear-gradient(180deg,_#07101d_0%,_#02060d_100%)] text-[var(--text-primary)] antialiased">
         <Nav />
         <main className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-6xl px-6 py-8">
           {children}

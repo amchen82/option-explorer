@@ -16,6 +16,7 @@ class StrategiesResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     symbol: str
+    reference_price: float
     position: StrategyPositionOut
     income: list[dict[str, Any]]
     hedge: list[dict[str, Any]]

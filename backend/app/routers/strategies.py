@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -29,9 +29,76 @@ _HEDGE_STRATEGIES = [
 ]
 
 
+def _build_strategies_response(symbol: str, position: dict, existing_options: list[dict]):
+    quote = market_data_svc.get_stock_quote(symbol)
+    market_signals = market_data_svc.get_market_signals(symbol)
+    market_data = {**quote, **market_signals}
+    market_data_stale = bool(quote.get("stale", False))
+    quote_price = float(quote.get("price") or 0.0)
+    reference_price = quote_price or float(position.get("cost_basis") or 0.0)
+
+    if quote_price <= 0.0:
+        alerts = check_proactive_alerts(position, market_data, existing_options)
+        return {
+            "symbol": symbol,
+            "reference_price": reference_price,
+            "position": StrategyPositionOut(**position),
+            "income": [],
+            "hedge": [],
+            "all": [],
+            "alerts": alerts,
+            "market_data_stale": market_data_stale,
+        }
+
+    income: list[dict] = []
+    for strategy in _INCOME_STRATEGIES:
+        income.extend(strategy.analyze(position, market_data))
+
+    hedge: list[dict] = []
+    for strategy in _HEDGE_STRATEGIES:
+        hedge.extend(strategy.analyze(position, market_data))
+
+    alerts = check_proactive_alerts(position, market_data, existing_options)
+
+    return {
+        "symbol": symbol,
+        "reference_price": reference_price,
+        "position": StrategyPositionOut(**position),
+        "income": income,
+        "hedge": hedge,
+        "all": income + hedge,
+        "alerts": alerts,
+        "market_data_stale": market_data_stale,
+    }
+
+
 def _get_user(authorization: str = Header(...), db: Session = Depends(get_db)):
     token = authorization.replace("Bearer ", "", 1).strip()
     return get_current_user(token, db)
+
+
+@router.get("/public/{symbol}", response_model=StrategiesResponse)
+def get_public_strategies(
+    symbol: str,
+    shares: float = Query(default=100.0, ge=0.0),
+    cost_basis: float | None = Query(default=None, ge=0.0),
+):
+    normalized_symbol = symbol.upper()
+    position = {
+        "symbol": normalized_symbol,
+        "shares": float(shares),
+        "cost_basis": float(cost_basis or 0.0),
+        "cash": float((cost_basis or 0.0) * shares),
+    }
+
+    response = _build_strategies_response(normalized_symbol, position, [])
+
+    if cost_basis is None and response["reference_price"] > 0:
+        position["cost_basis"] = response["reference_price"]
+        position["cash"] = response["reference_price"] * shares
+        response["position"] = StrategyPositionOut(**position)
+
+    return response
 
 
 @router.get("/{portfolio_id}/{symbol}", response_model=StrategiesResponse)
@@ -70,39 +137,4 @@ def get_strategies(
         .all()
     ]
 
-    quote = market_data_svc.get_stock_quote(symbol)
-    market_signals = market_data_svc.get_market_signals(symbol)
-    market_data = {**quote, **market_signals}
-    market_data_stale = bool(quote.get("stale", False))
-
-    if float(quote.get("price") or 0.0) <= 0.0:
-        alerts = check_proactive_alerts(position, market_data, existing_options)
-        return {
-            "symbol": symbol,
-            "position": StrategyPositionOut(**position),
-            "income": [],
-            "hedge": [],
-            "all": [],
-            "alerts": alerts,
-            "market_data_stale": market_data_stale,
-        }
-
-    income: list[dict] = []
-    for strategy in _INCOME_STRATEGIES:
-        income.extend(strategy.analyze(position, market_data))
-
-    hedge: list[dict] = []
-    for strategy in _HEDGE_STRATEGIES:
-        hedge.extend(strategy.analyze(position, market_data))
-
-    alerts = check_proactive_alerts(position, market_data, existing_options)
-
-    return {
-        "symbol": symbol,
-        "position": StrategyPositionOut(**position),
-        "income": income,
-        "hedge": hedge,
-        "all": income + hedge,
-        "alerts": alerts,
-        "market_data_stale": market_data_stale,
-    }
+    return _build_strategies_response(symbol, position, existing_options)

@@ -19,9 +19,9 @@ const STRATEGY_LABELS: Record<string, string> = {
 };
 
 const STRENGTH_STYLES: Record<StrategyResult["recommendation_strength"], string> = {
-  strong: "border-emerald-400/30 bg-emerald-400/10 text-emerald-100",
-  moderate: "border-cyan-400/30 bg-cyan-400/10 text-cyan-100",
-  weak: "border-slate-500/30 bg-slate-500/10 text-slate-200",
+  strong: "border-emerald-400/25 bg-emerald-400/8 text-[var(--text-primary)]",
+  moderate: "border-cyan-400/20 bg-cyan-400/8 text-[var(--text-primary)]",
+  weak: "border-slate-500/25 bg-slate-500/8 text-[var(--text-primary)]",
 };
 
 function money(value: number) {
@@ -45,6 +45,12 @@ export default function StrategyCard({ strategy, currentPrice }: Props) {
   const premium = strategy.premium_collected ?? strategy.net_credit ?? strategy.cost ?? strategy.net_debit;
   const premiumIsPositive = strategy.premium_collected !== undefined || strategy.net_credit !== undefined;
   const premiumLabel = strategy.cost !== undefined || strategy.net_debit !== undefined ? "Net debit" : "Premium";
+  const greeks = strategy.greeks;
+  const timingSignals = strategy.timing_signals;
+
+  function greekValue(value?: number) {
+    return typeof value === "number" ? value.toFixed(3) : "-";
+  }
 
   return (
     <article
@@ -53,59 +59,61 @@ export default function StrategyCard({ strategy, currentPrice }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-lg font-semibold text-slate-50">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)]">
               {STRATEGY_LABELS[strategy.strategy] ?? strategy.strategy.replace(/_/g, " ")}
             </h3>
-            <span className="rounded-full border border-white/10 bg-slate-950/40 px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-slate-300">
+            <span className="rounded-full border border-white/10 bg-slate-950/55 px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-[var(--text-secondary)]">
               {strategy.recommendation_strength}
             </span>
           </div>
-          <p className="mt-1 text-sm leading-6 text-slate-200">{strategy.action}</p>
+          <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{strategy.action}</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-slate-950/50 px-3 py-2 text-right">
-          <div className="text-[11px] uppercase tracking-[0.24em] text-slate-400">{premiumLabel}</div>
-          <div className="mt-1 text-sm font-semibold text-slate-50">
+          <div className="text-[11px] uppercase tracking-[0.24em] text-[var(--text-tertiary)]">{premiumLabel}</div>
+          <div className="metric mt-1 text-sm font-semibold text-[var(--text-primary)]">
             {premiumIsPositive ? "+" : "-"}
             {money(Math.abs(premium ?? 0))}
           </div>
         </div>
       </div>
 
-      <div className="mt-4 grid gap-2 text-sm text-slate-300 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-4 grid gap-2 text-sm text-[var(--text-secondary)] sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl bg-slate-950/50 px-3 py-2">
-          <div className="text-xs uppercase tracking-[0.22em] text-slate-500">Breakeven</div>
-          <div className="mt-1 font-medium text-slate-100">
+          <div className="text-xs uppercase tracking-[0.22em] text-[var(--text-tertiary)]">Breakeven</div>
+          <div className="metric mt-1 font-medium text-[var(--text-primary)]">
             {strategy.breakeven ? money(strategy.breakeven) : "-"}
           </div>
         </div>
         <div className="rounded-2xl bg-slate-950/50 px-3 py-2">
-          <div className="text-xs uppercase tracking-[0.22em] text-slate-500">Probability</div>
-          <div className="mt-1 font-medium text-slate-100">{percent(strategy.prob_profit)}</div>
+          <div className="text-xs uppercase tracking-[0.22em] text-[var(--text-tertiary)]">Probability</div>
+          <div className="metric mt-1 font-medium text-[var(--text-primary)]">{percent(strategy.prob_profit)}</div>
         </div>
         <div className="rounded-2xl bg-slate-950/50 px-3 py-2">
-          <div className="text-xs uppercase tracking-[0.22em] text-slate-500">IV rank</div>
-          <div className="mt-1 font-medium text-slate-100">{strategy.timing_signals.iv_rank.toFixed(0)}</div>
+          <div className="text-xs uppercase tracking-[0.22em] text-[var(--text-tertiary)]">IV rank</div>
+          <div className="metric mt-1 font-medium text-[var(--text-primary)]">
+            {typeof timingSignals.iv_rank === "number" ? timingSignals.iv_rank.toFixed(0) : "-"}
+          </div>
         </div>
         <div className="rounded-2xl bg-slate-950/50 px-3 py-2">
-          <div className="text-xs uppercase tracking-[0.22em] text-slate-500">DTE</div>
-          <div className="mt-1 font-medium text-slate-100">{strategy.dte} days</div>
+          <div className="text-xs uppercase tracking-[0.22em] text-[var(--text-tertiary)]">DTE</div>
+          <div className="metric mt-1 font-medium text-[var(--text-primary)]">{strategy.dte} days</div>
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-300">
+      <div className="mt-4 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
         <span className="rounded-full border border-white/10 bg-slate-950/40 px-3 py-1">
-          Delta {strategy.greeks.delta.toFixed(3)}
+          Delta {greekValue(greeks?.delta)}
         </span>
         <span className="rounded-full border border-white/10 bg-slate-950/40 px-3 py-1">
-          Theta {strategy.greeks.theta.toFixed(3)}
+          Theta {greekValue(greeks?.theta)}
         </span>
         <span className="rounded-full border border-white/10 bg-slate-950/40 px-3 py-1">
-          Vega {strategy.greeks.vega.toFixed(3)}
+          Vega {greekValue(greeks?.vega)}
         </span>
-        {strategy.timing_signals.earnings_days_away !== undefined &&
-          strategy.timing_signals.earnings_days_away !== null && (
+        {timingSignals.earnings_days_away !== undefined &&
+          timingSignals.earnings_days_away !== null && (
             <span className="rounded-full border border-white/10 bg-slate-950/40 px-3 py-1">
-              Earnings {strategy.timing_signals.earnings_days_away}d
+              Earnings {timingSignals.earnings_days_away}d
             </span>
           )}
       </div>
@@ -114,7 +122,7 @@ export default function StrategyCard({ strategy, currentPrice }: Props) {
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
-          className="text-sm font-medium text-cyan-200 transition hover:text-cyan-100"
+          className="text-sm font-medium text-[var(--text-accent)] transition hover:text-white"
         >
           {expanded ? "Hide details" : "Show details"}
         </button>
@@ -125,18 +133,22 @@ export default function StrategyCard({ strategy, currentPrice }: Props) {
           <PnLChart strategy={strategy} currentPrice={currentPrice} />
           <div className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-2xl bg-slate-950/50 px-3 py-3 text-center">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Max profit</div>
-              <div className="mt-1 text-sm font-semibold text-emerald-300">{money(strategy.max_profit)}</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Max profit</div>
+              <div className="metric mt-1 text-sm font-semibold text-emerald-300">{money(strategy.max_profit)}</div>
             </div>
             <div className="rounded-2xl bg-slate-950/50 px-3 py-3 text-center">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Max loss</div>
-              <div className="mt-1 text-sm font-semibold text-rose-300">{money(strategy.max_loss)}</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Max loss</div>
+              <div className="metric mt-1 text-sm font-semibold text-rose-300">{money(strategy.max_loss)}</div>
             </div>
             <div className="rounded-2xl bg-slate-950/50 px-3 py-3 text-center">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-500">RSI</div>
-              <div className="mt-1 text-sm font-semibold text-slate-100">
-                {strategy.timing_signals.rsi_14.toFixed(1)} /{" "}
-                {strategy.timing_signals.above_50dma ? "Above" : "Below"}
+              <div className="text-xs uppercase tracking-[0.2em] text-[var(--text-tertiary)]">RSI</div>
+              <div className="metric mt-1 text-sm font-semibold text-[var(--text-primary)]">
+                {typeof timingSignals.rsi_14 === "number" ? timingSignals.rsi_14.toFixed(1) : "-"} /{" "}
+                {typeof timingSignals.above_50dma === "boolean"
+                  ? timingSignals.above_50dma
+                    ? "Above"
+                    : "Below"
+                  : "N/A"}
               </div>
             </div>
           </div>

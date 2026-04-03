@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --text-primary: #f5f7fa;
+  --text-secondary: #c9d1db;
+  --text-tertiary: #8e9aa8;
+  --text-accent: #8ec5ff;
+}
+
 html {
   color-scheme: dark;
 }
@@ -10,5 +17,31 @@ body {
   margin: 0;
   min-height: 100vh;
   background: #030712;
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text-primary);
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0.005em;
+  font-variant-numeric: tabular-nums lining-nums;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  letter-spacing: -0.02em;
+}
+
+input,
+button,
+select,
+textarea {
+  font: inherit;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.metric {
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.015em;
 }

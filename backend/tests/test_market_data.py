@@ -81,3 +81,71 @@ def test_stale_data_on_failure(svc, monkeypatch):
 
     assert quote["price"] == 182.50
     assert quote.get("stale") is True
+
+
+def test_get_stock_quote_falls_back_to_previous_close_when_live_price_missing(svc):
+    ticker = make_mock_ticker(182.50)
+    ticker.info = {
+        "currentPrice": 0.0,
+        "regularMarketPrice": 0.0,
+        "fiftyTwoWeekHigh": 220.0,
+        "fiftyTwoWeekLow": 150.0,
+        "earningsDate": None,
+    }
+    fallback_prices = pd.DataFrame({"Close": [179.25, 181.40]}, index=pd.date_range(end="2026-04-02", periods=2, freq="B"))
+    ticker.history.return_value = fallback_prices
+
+    with patch("yfinance.Ticker", return_value=ticker):
+        quote = svc.get_stock_quote("AAPL")
+
+    assert quote["symbol"] == "AAPL"
+    assert quote["price"] == 181.40
+    assert quote["stale"] is True
+
+
+def test_get_stock_quote_uses_synthetic_data_when_yahoo_unavailable(svc):
+    ticker = make_mock_ticker(182.50)
+    ticker.info = {
+        "currentPrice": 0.0,
+        "regularMarketPrice": 0.0,
+        "fiftyTwoWeekHigh": 0.0,
+        "fiftyTwoWeekLow": 0.0,
+        "earningsDate": None,
+    }
+    ticker.history.return_value = pd.DataFrame({"Close": []})
+
+    with patch("yfinance.Ticker", return_value=ticker):
+        quote = svc.get_stock_quote("AAPL")
+
+    assert quote["symbol"] == "AAPL"
+    assert quote["price"] > 0.0
+    assert quote["52w_high"] >= quote["price"]
+    assert quote["52w_low"] <= quote["price"]
+    assert quote["stale"] is True
+
+
+def test_get_market_signals_uses_stable_synthetic_history_when_yahoo_unavailable(svc):
+    ticker = make_mock_ticker(182.50)
+    ticker.info = {
+        "currentPrice": 0.0,
+        "regularMarketPrice": 0.0,
+        "fiftyTwoWeekHigh": 0.0,
+        "fiftyTwoWeekLow": 0.0,
+        "earningsDate": None,
+    }
+    ticker.history.return_value = pd.DataFrame({"Close": []})
+
+    with patch("yfinance.Ticker", return_value=ticker):
+        first_quote = svc.get_stock_quote("AAPL")
+        first_signals = svc.get_market_signals("AAPL")
+
+    market_data_module._cache.clear()
+
+    with patch("yfinance.Ticker", return_value=ticker):
+        second_quote = svc.get_stock_quote("AAPL")
+        second_signals = svc.get_market_signals("AAPL")
+
+    assert first_quote["price"] == second_quote["price"]
+    assert first_signals["rsi_14"] == second_signals["rsi_14"]
+    assert first_signals["hv_20"] == second_signals["hv_20"]
+    assert first_signals["iv_rank"] == second_signals["iv_rank"]
