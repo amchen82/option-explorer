@@ -1,0 +1,3 @@
+symbol,average_buy_price,quantity,equity,percent_change,equity_change,type,name
+AAPL,162.00,100,18250.00,12.65,2050.00,stock,Apple Inc.
+TSLA,240.00,25,5500.00,-8.33,-500.00,stock,Tesla Inc.
