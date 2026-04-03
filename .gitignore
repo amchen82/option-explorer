@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+.env
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.env.local
+
+# Logs / OS
+*.log
+.DS_Store
+
+# Superpowers metadata
+.superpowers/

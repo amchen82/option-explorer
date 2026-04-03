@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude plugin:*)",
+      "Bash(claude help:*)",
+      "Bash(bash:*)",
+      "Bash(cat \"C:/Users/zhaih/claude/options/.superpowers/brainstorm/\"*/state/server-info)"
+    ]
+  }
+}
