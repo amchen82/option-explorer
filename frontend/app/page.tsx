@@ -7,6 +7,7 @@ import AddPositionModal from "@/components/AddPositionModal";
 import PositionCard from "@/components/PositionCard";
 import StrategyExplorer from "@/components/StrategyExplorer";
 import { api } from "@/lib/api";
+import { authEnabled } from "@/lib/auth";
 import type { Portfolio, StockPosition } from "@/lib/types";
 
 type AppSession = Session & {
@@ -39,6 +40,12 @@ export default function HomePage() {
   const canUseApi = Boolean(token);
 
   useEffect(() => {
+    if (!authEnabled) {
+      setSession(null);
+      setHydrating(false);
+      return;
+    }
+
     let active = true;
 
     getSession()
@@ -66,6 +73,10 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    if (!authEnabled) {
+      return;
+    }
+
     const nextToken = session?.apiToken;
 
     if (!nextToken) {
@@ -113,6 +124,10 @@ export default function HomePage() {
   }, [session?.apiToken, session]);
 
   useEffect(() => {
+    if (!authEnabled) {
+      return;
+    }
+
     if (!token || selectedPortfolioId === null) {
       setPositions([]);
       return;
@@ -202,12 +217,14 @@ export default function HomePage() {
             <p className="text-xs uppercase tracking-[0.35em] text-[var(--text-accent)]">Dashboard</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-4xl">Strategy Workspace</h1>
             <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">
-              {session ? (
+              {authEnabled && session ? (
                 <>
                   Connected as <span className="text-[var(--text-primary)]">{session.user?.email}</span>. Track tickers below, then save portfolios and imports when you need persistence.
                 </>
               ) : (
-                "Analyze multiple tickers without signing in. Sign in only when you want to save positions, imports, and history."
+                authEnabled
+                  ? "Analyze multiple tickers without signing in. Sign in only when you want to save positions, imports, and history."
+                  : "Analyze multiple tickers without signing in. Public mode is active until OAuth is configured."
               )}
             </p>
           </div>
@@ -250,14 +267,16 @@ export default function HomePage() {
         <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-6 shadow-lg shadow-cyan-950/10">
           <p className="text-xs uppercase tracking-[0.3em] text-[var(--text-tertiary)]">Account Features</p>
           <h2 className="mt-3 text-xl font-semibold text-[var(--text-primary)]">
-            {session ? "Persistence unlocked" : "Sign in to save"}
+            {authEnabled && session ? "Persistence unlocked" : authEnabled ? "Sign in to save" : "Auth not configured"}
           </h2>
           <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
-            {session
+            {authEnabled && session
               ? "Use the same analysis workspace, then save portfolios, positions, and imported activity to come back later."
-              : "The analysis workspace is available now. Signing in unlocks saved portfolios, CSV imports, and account history."}
+              : authEnabled
+                ? "The analysis workspace is available now. Signing in unlocks saved portfolios, CSV imports, and account history."
+                : "The analysis workspace is available now. Configure OAuth later to enable saved portfolios, CSV imports, and account history."}
           </p>
-          {!session && (
+          {authEnabled && !session && (
             <button
               type="button"
               onClick={() => signIn(undefined, { callbackUrl: "/" })}
@@ -269,7 +288,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {session && (
+      {authEnabled && session && (
         <>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-lg shadow-cyan-950/10">

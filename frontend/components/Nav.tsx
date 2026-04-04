@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Session } from "next-auth";
 import { getSession, signIn, signOut } from "next-auth/react";
+import { authEnabled } from "@/lib/auth";
 
 type AppSession = Session & {
   apiToken?: string;
@@ -13,6 +14,11 @@ export default function Nav() {
   const [session, setSession] = useState<AppSession | null>(null);
 
   useEffect(() => {
+    if (!authEnabled) {
+      setSession(null);
+      return;
+    }
+
     let active = true;
 
     getSession().then((nextSession) => {
@@ -33,7 +39,7 @@ export default function Nav() {
           <Link href="/" className="text-sm font-semibold tracking-[0.3em] text-slate-100">
             OPTIONSIQ
           </Link>
-          {session && (
+          {authEnabled && session && (
             <div className="hidden items-center gap-4 text-sm text-slate-400 sm:flex">
               <Link href="/" className="transition hover:text-slate-100">
                 Dashboard
@@ -45,7 +51,11 @@ export default function Nav() {
         </div>
 
         <div className="flex items-center gap-3">
-          {session ? (
+          {!authEnabled ? (
+            <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300">
+              Public mode
+            </span>
+          ) : session ? (
             <>
               <span className="hidden text-sm text-slate-400 md:inline">
                 {session.user?.email}
