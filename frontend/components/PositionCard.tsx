@@ -27,47 +27,47 @@ export default function PositionCard({ position, currentPrice, onClick }: Props)
     <button
       type="button"
       onClick={onClick}
-      className="group w-full rounded-3xl border border-white/10 bg-white/5 p-5 text-left shadow-lg shadow-cyan-950/10 transition hover:-translate-y-0.5 hover:border-cyan-400/30 hover:bg-white/[0.07]"
+      className="group w-full rounded border border-[var(--tv-border)] bg-[var(--tv-surface)] p-4 text-left transition hover:border-[var(--text-accent)] hover:bg-[var(--tv-surface-2)]"
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">{position.symbol}</p>
-          <h3 className="mt-2 text-2xl font-semibold text-slate-50">{position.shares} shares</h3>
+          <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-accent)]">{position.symbol}</p>
+          <h3 className="mt-1.5 text-lg font-semibold text-[var(--text-primary)]">{position.shares} shares</h3>
         </div>
-        <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-100">
-          Long equity
+        <span className="rounded border border-[rgba(38,166,154,0.3)] bg-[rgba(38,166,154,0.08)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--text-positive)]">
+          Long
         </span>
       </div>
 
-      <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
-        <div className="rounded-2xl bg-slate-950/50 px-3 py-3">
-          <dt className="text-slate-400">Cost basis</dt>
-          <dd className="mt-1 font-medium text-slate-100">{money(position.cost_basis)}</dd>
+      <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+        <div className="rounded bg-[var(--tv-bg)] px-3 py-2">
+          <dt className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-tertiary)]">Cost basis</dt>
+          <dd className="metric mt-1 text-[13px] font-medium text-[var(--text-primary)]">{money(position.cost_basis)}</dd>
         </div>
-        <div className="rounded-2xl bg-slate-950/50 px-3 py-3">
-          <dt className="text-slate-400">Value</dt>
-          <dd className="mt-1 font-medium text-slate-100">{money(price * position.shares)}</dd>
+        <div className="rounded bg-[var(--tv-bg)] px-3 py-2">
+          <dt className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-tertiary)]">Value</dt>
+          <dd className="metric mt-1 text-[13px] font-medium text-[var(--text-primary)]">{money(price * position.shares)}</dd>
         </div>
       </dl>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <div className={`text-sm font-medium ${positive ? "text-emerald-300" : "text-rose-300"}`}>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div className={`metric text-[13px] font-medium ${positive ? "text-[var(--text-positive)]" : "text-[var(--text-negative)]"}`}>
           {hasCurrentPrice ? (
             <>
-              {positive ? "+" : "-"}
-              {money(Math.abs(pnl))} ({positive ? "+" : "-"}
+              {positive ? "+" : "−"}
+              {money(Math.abs(pnl))} ({positive ? "+" : "−"}
               {Math.abs(pnlPct).toFixed(1)}%)
             </>
           ) : (
-            <span className="text-slate-400">Market price unavailable</span>
+            <span className="text-[var(--text-tertiary)]">Market price unavailable</span>
           )}
         </div>
-        <span className="text-xs text-slate-400 transition group-hover:text-slate-200">
-          Explore strategies
+        <span className="text-[11px] uppercase tracking-[0.14em] text-[var(--text-tertiary)] transition group-hover:text-[var(--text-accent)]">
+          Explore →
         </span>
       </div>
 
-      {position.notes && <p className="mt-4 text-sm leading-6 text-slate-400">{position.notes}</p>}
+      {position.notes && <p className="mt-3 text-[12px] leading-5 text-[var(--text-secondary)]">{position.notes}</p>}
     </button>
   );
 }
