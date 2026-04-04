@@ -28,7 +28,6 @@ export default function StrategyExplorer({ symbol, guestShares = 100, guestCostB
   useEffect(() => {
     if (!symbol) {
       setData(null);
-      setError(null);
       setLoading(false);
       return;
     }
