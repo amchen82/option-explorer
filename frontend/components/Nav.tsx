@@ -33,18 +33,18 @@ export default function Nav() {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/70 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6">
+    <nav className="sticky top-0 z-10 border-b border-[var(--tv-border)] bg-[rgba(11,14,17,0.94)] backdrop-blur">
+      <div className="mx-auto flex h-14 w-full max-w-[1360px] items-center justify-between px-5 xl:px-6">
         <div className="flex items-center gap-6">
-          <Link href="/" className="text-sm font-semibold tracking-[0.3em] text-slate-100">
+          <Link href="/" className="text-sm font-semibold tracking-[0.24em] text-[var(--text-primary)]">
             OPTIONSIQ
           </Link>
           {authEnabled && session && (
-            <div className="hidden items-center gap-4 text-sm text-slate-400 sm:flex">
-              <Link href="/" className="transition hover:text-slate-100">
+            <div className="hidden items-center gap-4 text-xs uppercase tracking-[0.18em] text-[var(--text-tertiary)] sm:flex">
+              <Link href="/" className="transition hover:text-[var(--text-primary)]">
                 Dashboard
               </Link>
-              <span className="text-slate-600">|</span>
+              <span className="text-[var(--tv-border)]">|</span>
               <span>Portfolio workspace</span>
             </div>
           )}
@@ -52,17 +52,17 @@ export default function Nav() {
 
         <div className="flex items-center gap-3">
           {!authEnabled ? (
-            <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300">
+            <span className="tv-chip rounded-md px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[var(--text-secondary)]">
               Public mode
             </span>
           ) : session ? (
             <>
-              <span className="hidden text-sm text-slate-400 md:inline">
+              <span className="hidden text-sm text-[var(--text-secondary)] md:inline">
                 {session.user?.email}
               </span>
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
-                className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:border-white/20 hover:bg-white/10"
+                className="tv-chip rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] transition hover:bg-[var(--tv-surface-3)]"
               >
                 Sign out
               </button>
@@ -70,7 +70,7 @@ export default function Nav() {
           ) : (
             <button
               onClick={() => signIn(undefined, { callbackUrl: "/" })}
-              className="rounded-full bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-cyan-400"
+              className="rounded-md bg-[var(--text-accent)] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#6b9eff]"
             >
               Sign in
             </button>

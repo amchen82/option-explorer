@@ -67,16 +67,16 @@ export default function StrategyExplorer({ symbol, guestShares = 100, guestCostB
   const referencePrice = data?.reference_price ?? guestCostBasis ?? 0;
 
   return (
-    <div className="min-h-[32rem] rounded-[2rem] border border-white/10 bg-slate-950/70 shadow-2xl shadow-cyan-950/20">
-      <div className="border-b border-white/10 px-5 py-4 sm:px-6">
-        <p className="text-xs uppercase tracking-[0.28em] text-cyan-300">Strategy explorer</p>
+    <div className="tv-panel min-h-[32rem] rounded-xl">
+      <div className="border-b border-[var(--tv-border)] px-5 py-4 sm:px-6">
+        <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">Strategy explorer</p>
         {symbol ? (
-          <h2 className="mt-1 text-2xl font-semibold text-slate-50">
+          <h2 className="mt-1 text-[1.55rem] font-semibold text-[var(--text-primary)]">
             {symbol}
-            <span className="ml-3 text-sm font-normal text-slate-400">Reference {referencePrice.toFixed(2)}</span>
+            <span className="metric ml-3 text-sm font-normal text-[var(--text-secondary)]">Reference {referencePrice.toFixed(2)}</span>
           </h2>
         ) : (
-          <h2 className="mt-1 text-2xl font-semibold text-slate-50">Select a ticker</h2>
+          <h2 className="mt-1 text-[1.55rem] font-semibold text-[var(--text-primary)]">Select a ticker</h2>
         )}
       </div>
 
@@ -87,8 +87,8 @@ export default function StrategyExplorer({ symbol, guestShares = 100, guestCostB
               key={`${alert.message}-${index}`}
               className={`rounded-2xl px-4 py-3 text-sm ${
                 alert.severity === "warning"
-                  ? "border border-amber-400/20 bg-amber-400/10 text-amber-100"
-                  : "border border-cyan-400/20 bg-cyan-400/10 text-cyan-100"
+                  ? "border border-[rgba(211,139,44,0.35)] bg-[rgba(211,139,44,0.12)] text-[#f1c27a]"
+                  : "border border-[rgba(76,141,255,0.3)] bg-[rgba(76,141,255,0.12)] text-[#b5ceff]"
               }`}
             >
               {alert.message}
@@ -97,7 +97,7 @@ export default function StrategyExplorer({ symbol, guestShares = 100, guestCostB
         </div>
       )}
 
-      <div className="flex gap-2 border-b border-white/10 px-5 py-4 sm:px-6">
+      <div className="flex gap-2 border-b border-[var(--tv-border)] px-5 py-4 sm:px-6">
         {(["income", "hedge", "all"] as Tab[]).map((nextTab) => {
           const isActive = tab === nextTab;
 
@@ -106,10 +106,10 @@ export default function StrategyExplorer({ symbol, guestShares = 100, guestCostB
               key={nextTab}
               type="button"
               onClick={() => setTab(nextTab)}
-              className={`rounded-full px-4 py-2 text-sm transition ${
+              className={`rounded-md border px-4 py-2 text-sm transition ${
                 isActive
-                  ? "bg-cyan-400 text-slate-950"
-                  : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-slate-100"
+                  ? "border-[var(--text-accent)] bg-[rgba(76,141,255,0.18)] text-white"
+                  : "border-[var(--tv-border)] bg-[var(--tv-surface)] text-[var(--text-secondary)] hover:bg-[var(--tv-surface-2)] hover:text-[var(--text-primary)]"
               }`}
             >
               {TAB_LABELS[nextTab]}
@@ -120,19 +120,19 @@ export default function StrategyExplorer({ symbol, guestShares = 100, guestCostB
 
       <div className="max-h-[48rem] overflow-y-auto px-5 py-5 sm:px-6">
         {!symbol ? (
-          <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 px-6 py-10 text-center text-sm text-slate-300">
+          <div className="rounded-md border border-dashed border-[var(--tv-border)] bg-[var(--tv-surface)] px-6 py-10 text-center text-sm text-[var(--text-secondary)]">
             Add a ticker above to start comparing strategy ideas.
           </div>
         ) : loading ? (
-          <div className="rounded-3xl border border-white/10 bg-white/5 px-6 py-10 text-center text-sm text-slate-300">
+          <div className="rounded-md border border-[var(--tv-border)] bg-[var(--tv-surface)] px-6 py-10 text-center text-sm text-[var(--text-secondary)]">
             Loading strategy ideas...
           </div>
         ) : error ? (
-          <div className="rounded-3xl border border-rose-400/20 bg-rose-500/10 px-6 py-10 text-center text-sm text-rose-100">
+          <div className="rounded-md border border-[rgba(224,79,95,0.35)] bg-[rgba(224,79,95,0.12)] px-6 py-10 text-center text-sm text-[#f0b7bf]">
             {error}
           </div>
         ) : strategies.length === 0 ? (
-          <div className="rounded-3xl border border-white/10 bg-white/5 px-6 py-10 text-center text-sm text-slate-300">
+          <div className="rounded-md border border-[var(--tv-border)] bg-[var(--tv-surface)] px-6 py-10 text-center text-sm text-[var(--text-secondary)]">
             No strategies available for this view.
           </div>
         ) : (
@@ -148,7 +148,7 @@ export default function StrategyExplorer({ symbol, guestShares = 100, guestCostB
         )}
 
         {data?.market_data_stale && (
-          <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+          <div className="mt-4 rounded-md border border-[rgba(211,139,44,0.35)] bg-[rgba(211,139,44,0.12)] px-4 py-3 text-sm text-[#f1c27a]">
             Market data may be stale.
           </div>
         )}
