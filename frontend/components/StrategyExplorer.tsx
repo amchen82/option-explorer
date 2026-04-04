@@ -71,10 +71,17 @@ export default function StrategyExplorer({ symbol, guestShares = 100, guestCostB
       <div className="border-b border-[var(--tv-border)] px-5 py-4 sm:px-6">
         <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">Strategy explorer</p>
         {symbol ? (
-          <h2 className="mt-1 text-[1.55rem] font-semibold text-[var(--text-primary)]">
-            {symbol}
-            <span className="metric ml-3 text-sm font-normal text-[var(--text-secondary)]">Reference {referencePrice.toFixed(2)}</span>
-          </h2>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+            <h2 className="text-[1.55rem] font-semibold text-[var(--text-primary)]">{symbol}</h2>
+            <span className="metric text-sm font-normal text-[var(--text-secondary)]">
+              Reference {referencePrice.toFixed(2)}
+            </span>
+            {data?.market_data_stale && (
+              <span className="rounded-md border border-[rgba(211,139,44,0.35)] bg-[rgba(211,139,44,0.12)] px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-[#f1c27a]">
+                Market data may be stale
+              </span>
+            )}
+          </div>
         ) : (
           <h2 className="mt-1 text-[1.55rem] font-semibold text-[var(--text-primary)]">Select a ticker</h2>
         )}
@@ -147,11 +154,6 @@ export default function StrategyExplorer({ symbol, guestShares = 100, guestCostB
           </div>
         )}
 
-        {data?.market_data_stale && (
-          <div className="mt-4 rounded-md border border-[rgba(211,139,44,0.35)] bg-[rgba(211,139,44,0.12)] px-4 py-3 text-sm text-[#f1c27a]">
-            Market data may be stale.
-          </div>
-        )}
       </div>
     </div>
   );
