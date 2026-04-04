@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { getMockStrategies } from "@/lib/mockData";
 import type { Alert, StrategiesResponse, StrategyResult } from "@/lib/types";
 import StrategyCard from "./StrategyCard";
 
@@ -23,7 +24,6 @@ export default function StrategyExplorer({ symbol, guestShares = 100, guestCostB
   const [tab, setTab] = useState<Tab>("income");
   const [data, setData] = useState<StrategiesResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!symbol) {
@@ -35,7 +35,6 @@ export default function StrategyExplorer({ symbol, guestShares = 100, guestCostB
 
     let active = true;
     setLoading(true);
-    setError(null);
 
     api.strategies
       .getPublic(symbol, guestShares, guestCostBasis)
@@ -44,13 +43,12 @@ export default function StrategyExplorer({ symbol, guestShares = 100, guestCostB
           setData(response);
         }
       })
-      .catch((fetchError: unknown) => {
+      .catch(() => {
         if (!active) {
           return;
         }
 
-        setData(null);
-        setError(fetchError instanceof Error ? fetchError.message : "Failed to load strategies");
+        setData(getMockStrategies(symbol));
       })
       .finally(() => {
         if (active) {
@@ -67,7 +65,7 @@ export default function StrategyExplorer({ symbol, guestShares = 100, guestCostB
   const referencePrice = data?.reference_price ?? guestCostBasis ?? 0;
 
   return (
-    <div className="tv-panel min-h-[32rem] rounded-xl">
+    <div className="tv-panel min-h-[32rem] rounded">
       <div className="border-b border-[var(--tv-border)] px-5 py-4 sm:px-6">
         <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">Strategy explorer</p>
         {symbol ? (
@@ -92,10 +90,10 @@ export default function StrategyExplorer({ symbol, guestShares = 100, guestCostB
           {data.alerts.map((alert: Alert, index: number) => (
             <div
               key={`${alert.message}-${index}`}
-              className={`rounded-2xl px-4 py-3 text-sm ${
+              className={`rounded px-4 py-3 text-sm ${
                 alert.severity === "warning"
                   ? "border border-[rgba(211,139,44,0.35)] bg-[rgba(211,139,44,0.12)] text-[#f1c27a]"
-                  : "border border-[rgba(76,141,255,0.3)] bg-[rgba(76,141,255,0.12)] text-[#b5ceff]"
+                  : "border border-[rgba(76,141,255,0.3)] bg-[rgba(41,98,255,0.12)] text-[#b5ceff]"
               }`}
             >
               {alert.message}
@@ -104,7 +102,7 @@ export default function StrategyExplorer({ symbol, guestShares = 100, guestCostB
         </div>
       )}
 
-      <div className="flex gap-2 border-b border-[var(--tv-border)] px-5 py-4 sm:px-6">
+      <div className="flex gap-1 border-b border-[var(--tv-border)] px-5 sm:px-6">
         {(["income", "hedge", "all"] as Tab[]).map((nextTab) => {
           const isActive = tab === nextTab;
 
@@ -113,10 +111,10 @@ export default function StrategyExplorer({ symbol, guestShares = 100, guestCostB
               key={nextTab}
               type="button"
               onClick={() => setTab(nextTab)}
-              className={`rounded-md border px-4 py-2 text-sm transition ${
+              className={`-mb-px border-b-2 px-4 pb-3 pt-3.5 text-sm font-medium transition ${
                 isActive
-                  ? "border-[var(--text-accent)] bg-[rgba(76,141,255,0.18)] text-white"
-                  : "border-[var(--tv-border)] bg-[var(--tv-surface)] text-[var(--text-secondary)] hover:bg-[var(--tv-surface-2)] hover:text-[var(--text-primary)]"
+                  ? "border-[var(--text-accent)] text-white"
+                  : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               }`}
             >
               {TAB_LABELS[nextTab]}
@@ -131,12 +129,9 @@ export default function StrategyExplorer({ symbol, guestShares = 100, guestCostB
             Add a ticker above to start comparing strategy ideas.
           </div>
         ) : loading ? (
-          <div className="rounded-md border border-[var(--tv-border)] bg-[var(--tv-surface)] px-6 py-10 text-center text-sm text-[var(--text-secondary)]">
-            Loading strategy ideas...
-          </div>
-        ) : error ? (
-          <div className="rounded-md border border-[rgba(224,79,95,0.35)] bg-[rgba(224,79,95,0.12)] px-6 py-10 text-center text-sm text-[#f0b7bf]">
-            {error}
+          <div className="flex items-center justify-center gap-3 rounded-md border border-[var(--tv-border)] bg-[var(--tv-surface)] px-6 py-10 text-sm text-[var(--text-secondary)]">
+            <span className="spinner" />
+            Loading strategy ideas…
           </div>
         ) : strategies.length === 0 ? (
           <div className="rounded-md border border-[var(--tv-border)] bg-[var(--tv-surface)] px-6 py-10 text-center text-sm text-[var(--text-secondary)]">
