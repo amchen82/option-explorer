@@ -39,6 +39,12 @@ export default function Nav() {
           <Link href="/" className="text-sm font-semibold tracking-[0.24em] text-[var(--text-primary)]">
             OPTIONSIQ
           </Link>
+          <Link
+            href="/ideas"
+            className="text-xs uppercase tracking-[0.18em] text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+          >
+            Ideas
+          </Link>
           {authEnabled && session && (
             <div className="hidden items-center gap-4 text-xs uppercase tracking-[0.18em] text-[var(--text-tertiary)] sm:flex">
               <Link href="/" className="transition hover:text-[var(--text-primary)]">

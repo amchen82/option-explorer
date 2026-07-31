@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Options Ideas</string>
+    <string name="title_activity_main">Options Ideas</string>
+    <string name="package_name">com.optionsiq.ideas</string>
+    <string name="custom_url_scheme">com.optionsiq.ideas</string>
+</resources>

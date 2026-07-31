@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import NativeChrome from "@/components/NativeChrome";
 import Nav from "@/components/Nav";
 import "./globals.css";
 
@@ -16,6 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-[var(--tv-bg)] text-[var(--text-primary)] antialiased">
+        <NativeChrome />
         <Nav />
         <main className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[1360px] px-5 py-6 xl:px-6">
           {children}

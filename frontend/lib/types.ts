@@ -70,6 +70,94 @@ export interface Alert {
   severity: "info" | "warning";
 }
 
+export type Bias = "bullish" | "bearish" | "neutral";
+export type Conviction = "high" | "medium" | "low";
+export type DataQuality = "live" | "modeled";
+
+export interface IdeaLeg {
+  action: "buy" | "sell";
+  contract_type: "call" | "put";
+  strike: number;
+  expiration: string;
+  quantity: number;
+  price: number;
+  bid: number;
+  ask: number;
+  implied_volatility: number;
+  open_interest: number;
+  volume: number;
+  delta: number;
+}
+
+export interface GreekExplanation {
+  greek: string;
+  label: string;
+  value: number;
+  dollars: number | null;
+  plain: string;
+}
+
+export interface Idea {
+  id: string;
+  symbol: string;
+  strategy: string;
+  name: string;
+  bias: Bias;
+  summary: string;
+  legs: IdeaLeg[];
+  expiration: string;
+  dte: number;
+  net_debit_credit: number;
+  is_credit: boolean;
+  max_profit: number | null;
+  max_loss: number;
+  breakeven: number;
+  prob_profit: number;
+  capital_required: number;
+  requires_shares: number;
+  shares_satisfied: boolean;
+  conviction: Conviction;
+  conviction_score: number;
+  why: string[];
+  greeks: Greeks;
+  greeks_explained: GreekExplanation[];
+  risks: string[];
+  liquidity: { spread_pct: number; min_open_interest: number; min_volume: number };
+  data_quality: DataQuality;
+}
+
+export interface MarketView {
+  bias: Bias;
+  score: number;
+  headline: string;
+  drivers: string[];
+}
+
+export interface VolatilityView {
+  current_iv: number;
+  iv_rank: number;
+  hv_20: number;
+  iv_vs_hv: number;
+  regime: "high" | "elevated" | "normal" | "low";
+  implication: "favors_selling" | "favors_buying" | "neutral";
+  headline: string;
+  detail: string;
+  comparison: string;
+}
+
+export interface IdeasResponse {
+  symbol: string;
+  as_of: string;
+  data_quality: DataQuality;
+  expiration: string;
+  dte: number;
+  quote: { symbol: string; price: number; "52w_high": number; "52w_low": number; stale: boolean };
+  market_view: MarketView;
+  volatility: VolatilityView;
+  ideas: Idea[];
+  disclaimer: string;
+}
+
 export interface StrategiesResponse {
   symbol: string;
   reference_price: number;

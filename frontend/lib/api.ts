@@ -54,4 +54,11 @@ export const api = {
       return apiFetch(`/strategies/public/${symbol}?${params.toString()}`);
     },
   },
+  ideas: {
+    get: (symbol: string, shares = 0) => {
+      const params = new URLSearchParams({ shares: shares.toString() });
+
+      return apiFetch(`/ideas/${encodeURIComponent(symbol)}?${params.toString()}`);
+    },
+  },
 };

@@ -2,13 +2,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import auth, import_csv, portfolios, positions, strategies
+from app.routers import auth, ideas, import_csv, portfolios, positions, strategies
 
 app = FastAPI(title="Options Strategy Tool")
 
+# Capacitor serves the packaged app from these origins inside the native webview.
+NATIVE_APP_ORIGINS = ["capacitor://localhost", "ionic://localhost", "http://localhost"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
+    allow_origins=settings.cors_origins_list + NATIVE_APP_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -25,3 +28,4 @@ app.include_router(portfolios.router)
 app.include_router(positions.router)
 app.include_router(strategies.router)
 app.include_router(import_csv.router)
+app.include_router(ideas.router)
