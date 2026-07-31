@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     github_client_secret: str = ""
     market_data_cache_ttl_seconds: int = 900
     historical_data_cache_ttl_seconds: int = 3600
+    option_chain_cache_ttl_seconds: int = 900
 
     @property
     def cors_origins_list(self) -> list[str]:

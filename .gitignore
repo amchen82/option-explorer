@@ -12,8 +12,22 @@ venv/
 # Node / Next.js
 node_modules/
 .next/
+.next-mobile/
 out/
 .env.local
+*.tsbuildinfo
+
+# Capacitor native build output (the ios/ and android/ projects are committed)
+frontend/ios/App/Pods/
+frontend/ios/App/App/public/
+frontend/ios/App/App/capacitor.config.json
+frontend/ios/App/Podfile.lock
+frontend/android/build/
+frontend/android/app/build/
+frontend/android/app/src/main/assets/public/
+frontend/android/app/src/main/assets/capacitor.config.json
+frontend/android/.gradle/
+frontend/android/local.properties
 
 # Logs / OS
 *.log

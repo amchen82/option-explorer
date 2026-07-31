@@ -1,0 +1,170 @@
+from __future__ import annotations
+
+from unittest.mock import MagicMock, patch
+
+import pytest
+from fastapi.testclient import TestClient
+
+from app.main import app
+from tests.conftest import SPOT, build_chain
+
+client = TestClient(app)
+
+QUOTE = {
+    "symbol": "AAPL",
+    "price": SPOT,
+    "52w_high": 260.0,
+    "52w_low": 164.0,
+    "earnings_date": None,
+    "stale": False,
+}
+
+SIGNALS = {
+    "rsi_14": 58.0,
+    "above_50dma": True,
+    "above_200dma": True,
+    "hv_20": 0.24,
+    "hv_60": 0.26,
+    "iv_rank": 62.0,
+    "current_iv": 0.285,
+    "52w_high": 260.0,
+    "52w_low": 164.0,
+}
+
+
+def fake_market_data(quote_overrides: dict | None = None) -> MagicMock:
+    service = MagicMock()
+    service.get_stock_quote.return_value = {**QUOTE, **(quote_overrides or {})}
+    service.get_market_signals.return_value = dict(SIGNALS)
+    return service
+
+
+def fetch(path: str = "/ideas/AAPL", *, quote_overrides=None, chain=None):
+    with patch("app.routers.ideas.market_data_svc", fake_market_data(quote_overrides)), patch(
+        "app.routers.ideas.get_option_chain", return_value=chain or build_chain()
+    ):
+        return client.get(path)
+
+
+class TestSuccessfulResponse:
+    def test_returns_the_full_payload(self):
+        response = fetch()
+
+        assert response.status_code == 200
+        body = response.json()
+        assert set(body) == {
+            "symbol",
+            "as_of",
+            "data_quality",
+            "expiration",
+            "dte",
+            "quote",
+            "market_view",
+            "volatility",
+            "ideas",
+            "disclaimer",
+        }
+
+    def test_symbol_is_normalized_to_uppercase(self):
+        assert fetch("/ideas/aapl").json()["symbol"] == "AAPL"
+
+    def test_market_view_carries_a_bias_and_its_drivers(self):
+        view = fetch().json()["market_view"]
+
+        assert view["bias"] in {"bullish", "bearish", "neutral"}
+        assert view["headline"]
+        assert len(view["drivers"]) == 3
+
+    def test_volatility_block_is_explained(self):
+        volatility = fetch().json()["volatility"]
+
+        assert volatility["regime"] == "elevated"
+        assert volatility["implication"] == "favors_selling"
+        assert "implied volatility" in volatility["detail"].lower()
+
+    def test_ideas_are_present_and_ranked(self):
+        ideas = fetch().json()["ideas"]
+
+        assert len(ideas) == 8
+        scores = [idea["conviction_score"] for idea in ideas]
+        assert scores == sorted(scores, reverse=True)
+
+    def test_every_idea_explains_itself(self):
+        for idea in fetch().json()["ideas"]:
+            assert idea["why"]
+            assert idea["greeks_explained"]
+            assert idea["risks"]
+            assert idea["bias"] in {"bullish", "bearish", "neutral"}
+
+    def test_disclaimer_is_always_returned(self):
+        assert "not financial advice" in fetch().json()["disclaimer"]
+
+
+class TestSharesParameter:
+    def test_stock_strategies_are_unsatisfied_by_default(self):
+        ideas = fetch().json()["ideas"]
+        gated = [idea for idea in ideas if idea["requires_shares"] == 100]
+
+        assert gated
+        assert all(idea["shares_satisfied"] is False for idea in gated)
+
+    def test_supplying_shares_satisfies_them(self):
+        ideas = fetch("/ideas/AAPL?shares=100").json()["ideas"]
+
+        assert all(idea["shares_satisfied"] for idea in ideas)
+
+    def test_negative_shares_are_rejected(self):
+        assert fetch("/ideas/AAPL?shares=-5").status_code == 422
+
+
+class TestDataQuality:
+    def test_live_chain_and_fresh_quote_report_live(self):
+        assert fetch().json()["data_quality"] == "live"
+
+    def test_modeled_chain_propagates_to_the_response_and_every_idea(self):
+        body = fetch(chain=build_chain(data_quality="modeled")).json()
+
+        assert body["data_quality"] == "modeled"
+        assert all(idea["data_quality"] == "modeled" for idea in body["ideas"])
+
+    def test_a_stale_quote_alone_downgrades_the_response(self):
+        """A live chain priced off a synthetic spot is not live data."""
+        body = fetch(quote_overrides={"stale": True}).json()
+
+        assert body["data_quality"] == "modeled"
+
+
+class TestErrorHandling:
+    @pytest.mark.parametrize("symbol", ["1AAPL", "toolongsymbol", "AA PL"])
+    def test_malformed_symbols_are_rejected(self, symbol):
+        response = fetch(f"/ideas/{symbol}")
+
+        assert response.status_code == 400
+        assert "not a valid ticker" in response.json()["detail"]
+
+    def test_missing_price_returns_not_found(self):
+        response = fetch(quote_overrides={"price": 0.0})
+
+        assert response.status_code == 404
+        assert "No market data" in response.json()["detail"]
+
+    def test_earnings_dates_in_unexpected_shapes_do_not_crash(self):
+        for shape in ([], ["2026-08-28"], "2026-08-28", None, 12345):
+            response = fetch(quote_overrides={"earnings_date": shape})
+            assert response.status_code == 200
+
+
+class TestExistingRoutesUnaffected:
+    """The ideas engine is additive; nothing it touches may change behavior."""
+
+    def test_health_still_responds(self):
+        response = client.get("/health")
+
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
+
+    def test_public_strategies_route_still_exists(self):
+        routes = {route.path for route in app.routes}
+
+        assert "/strategies/public/{symbol}" in routes
+        assert "/ideas/{symbol}" in routes

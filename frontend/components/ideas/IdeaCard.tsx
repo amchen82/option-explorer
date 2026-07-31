@@ -1,0 +1,142 @@
+"use client";
+
+import { useState } from "react";
+import type { Conviction, Idea } from "@/lib/types";
+import BiasPill from "./BiasPill";
+import GreeksTable from "./GreeksTable";
+import PayoffChart from "./PayoffChart";
+
+const CONVICTION_STYLE: Record<Conviction, string> = {
+  high: "text-[var(--text-positive)]",
+  medium: "text-[var(--text-accent)]",
+  low: "text-[var(--text-tertiary)]",
+};
+
+function money(value: number): string {
+  return `${value < 0 ? "-" : ""}$${Math.abs(value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+}
+
+function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
+  return (
+    <div>
+      <dt className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{label}</dt>
+      <dd className={`metric text-sm ${tone ?? "text-[var(--text-primary)]"}`}>{value}</dd>
+    </div>
+  );
+}
+
+export default function IdeaCard({ idea, spot }: { idea: Idea; spot: number }) {
+  const [open, setOpen] = useState(false);
+  const needsStock = idea.requires_shares > 0 && !idea.shares_satisfied;
+
+  return (
+    <article className="tv-panel overflow-hidden rounded-xl">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+        className="w-full px-4 py-3.5 text-left transition hover:bg-[var(--tv-surface-2)]"
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-base font-semibold text-[var(--text-primary)]">{idea.name}</h3>
+          <BiasPill bias={idea.bias} />
+          <span className={`ml-auto text-[11px] uppercase tracking-[0.12em] ${CONVICTION_STYLE[idea.conviction]}`}>
+            {idea.conviction} conviction
+          </span>
+        </div>
+
+        <p className="mt-1.5 text-sm text-[var(--text-secondary)]">{idea.summary}</p>
+
+        {needsStock && (
+          <p className="mt-2 inline-block rounded border border-[rgba(211,139,44,0.35)] bg-[rgba(211,139,44,0.12)] px-2 py-0.5 text-[11px] text-[#f1c27a]">
+            Requires owning {idea.requires_shares} shares
+          </p>
+        )}
+
+        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-4">
+          <Stat
+            label="Max profit"
+            value={idea.max_profit === null ? "Unlimited" : money(idea.max_profit)}
+            tone="text-[var(--text-positive)]"
+          />
+          <Stat label="Max loss" value={money(idea.max_loss)} tone="text-[var(--text-negative)]" />
+          <Stat label="Chance of profit" value={`${(idea.prob_profit * 100).toFixed(0)}%`} />
+          <Stat label="Capital" value={money(idea.capital_required)} />
+        </dl>
+
+        <p className="mt-2.5 text-[11px] uppercase tracking-[0.12em] text-[var(--text-accent)]">
+          {open ? "Hide detail" : "Why this trade →"}
+        </p>
+      </button>
+
+      {open && (
+        <div className="space-y-5 border-t border-[var(--tv-border)] px-4 py-4">
+          <section>
+            <h4 className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">Why this trade</h4>
+            <ul className="mt-2 space-y-2">
+              {idea.why.map((reason) => (
+                <li key={reason} className="flex gap-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+                  <span aria-hidden="true" className="mt-2 h-px w-2 shrink-0 bg-[var(--text-accent)]" />
+                  <span>{reason}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section>
+            <h4 className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">The trade</h4>
+            <ul className="mt-2 space-y-1.5">
+              {idea.legs.map((leg) => (
+                <li
+                  key={`${leg.action}-${leg.contract_type}-${leg.strike}`}
+                  className="metric flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-lg border border-[var(--tv-border)] bg-[var(--tv-surface)] px-3 py-2 text-sm"
+                >
+                  <span className="text-[var(--text-primary)]">
+                    <span className={leg.action === "buy" ? "text-[var(--text-positive)]" : "text-[var(--text-negative)]"}>
+                      {leg.action === "buy" ? "Buy" : "Sell"}
+                    </span>{" "}
+                    {leg.quantity}x ${leg.strike} {leg.contract_type}
+                  </span>
+                  <span className="text-[var(--text-secondary)]">
+                    ${leg.price.toFixed(2)}
+                    <span className="ml-2 text-[var(--text-tertiary)]">
+                      Δ{leg.delta.toFixed(2)} · OI {leg.open_interest.toLocaleString()}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="metric mt-2 text-sm text-[var(--text-secondary)]">
+              {idea.is_credit ? "You collect" : "You pay"} {money(Math.abs(idea.net_debit_credit))} up front · breakeven $
+              {idea.breakeven.toFixed(2)} · {idea.dte} days to expiry
+            </p>
+          </section>
+
+          <section>
+            <h4 className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">Profit at expiration</h4>
+            <PayoffChart idea={idea} spot={spot} />
+          </section>
+
+          <section>
+            <h4 className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">What the Greeks mean</h4>
+            <div className="mt-2">
+              <GreeksTable rows={idea.greeks_explained} />
+            </div>
+          </section>
+
+          <section>
+            <h4 className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-warning)]">What could go wrong</h4>
+            <ul className="mt-2 space-y-2">
+              {idea.risks.map((risk) => (
+                <li key={risk} className="flex gap-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+                  <span aria-hidden="true" className="mt-2 h-px w-2 shrink-0 bg-[var(--text-warning)]" />
+                  <span>{risk}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
+      )}
+    </article>
+  );
+}
