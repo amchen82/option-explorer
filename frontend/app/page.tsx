@@ -201,21 +201,22 @@ export default function HomePage() {
 
   if (hydrating) {
     return (
-      <section className="flex w-full items-center justify-center">
-        <div className="rounded-3xl border border-white/10 bg-white/5 px-6 py-4 text-sm text-slate-300 shadow-xl shadow-cyan-950/20 backdrop-blur">
-          Loading session...
+      <section className="flex w-full items-center justify-center py-20">
+        <div className="tv-panel flex items-center gap-3 rounded px-6 py-4 text-sm text-[var(--text-secondary)]">
+          <span className="spinner" />
+          Loading session…
         </div>
       </section>
     );
   }
 
   return (
-    <section className="w-full space-y-6">
-      <div className="tv-panel rounded-2xl p-5">
+    <section className="w-full space-y-3">
+      <div className="tv-panel rounded p-5">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-[11px] uppercase tracking-[0.28em] text-[var(--text-accent)]">Strategy Terminal</p>
-            <h1 className="mt-2 text-[2rem] font-semibold tracking-tight text-[var(--text-primary)] sm:text-[2.35rem]">Strategy Workspace</h1>
+            <h1 className="gradient-heading mt-1.5 text-[1.6rem] font-semibold tracking-tight sm:text-[1.85rem]">Strategy Workspace</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
               {authEnabled && session ? (
                 <>
@@ -236,12 +237,12 @@ export default function HomePage() {
                 value={symbolInput}
                 onChange={(event) => setSymbolInput(event.target.value.toUpperCase())}
                 placeholder="AAPL"
-                className="rounded-md border border-[var(--tv-border)] bg-[var(--tv-bg)] px-4 py-2.5 text-[var(--text-primary)] outline-none transition focus:border-[var(--text-accent)]"
+                className="rounded border border-[var(--tv-border)] bg-[var(--tv-bg)] px-4 py-2.5 text-[var(--text-primary)] outline-none transition focus:border-[var(--text-accent)]"
               />
             </label>
             <button
               type="submit"
-              className="self-end rounded-md bg-[var(--text-accent)] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#6b9eff]"
+              className="self-end rounded bg-[var(--text-accent)] px-5 py-3 text-sm font-medium text-white transition hover:opacity-90"
             >
               Explore strategies
             </button>
@@ -250,65 +251,32 @@ export default function HomePage() {
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+        <div className="rounded border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
           {error}
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1.25fr_0.85fr]">
-        <div className="tv-panel rounded-2xl p-5">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-accent)]">Workspace</p>
-          <h2 className="mt-3 text-[1.55rem] font-semibold text-[var(--text-primary)]">Track multiple symbols in one view</h2>
-          <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
-            Add symbols to the list, switch between them from the left rail, and compare income and hedge ideas in the same workspace.
-          </p>
-        </div>
-
-        <div className="tv-panel rounded-2xl p-5">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-tertiary)]">Account Features</p>
-          <h2 className="mt-3 text-[1.2rem] font-semibold text-[var(--text-primary)]">
-            {authEnabled && session ? "Persistence unlocked" : authEnabled ? "Sign in to save" : "Auth not configured"}
-          </h2>
-          <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
-            {authEnabled && session
-              ? "Use the same analysis workspace, then save portfolios, positions, and imported activity to come back later."
-              : authEnabled
-                ? "The analysis workspace is available now. Signing in unlocks saved portfolios, CSV imports, and account history."
-                : "The analysis workspace is available now. Configure OAuth later to enable saved portfolios, CSV imports, and account history."}
-          </p>
-          {authEnabled && !session && (
-            <button
-              type="button"
-              onClick={() => signIn(undefined, { callbackUrl: "/" })}
-              className="tv-chip mt-6 rounded-md px-4 py-2.5 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--tv-surface-3)]"
-            >
-              Sign in to save your workspace
-            </button>
-          )}
-        </div>
-      </div>
-
       {authEnabled && session && (
         <>
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="tv-panel rounded-xl p-5">
+            <div className="tv-panel rounded p-5">
               <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Positions</p>
               <p className="metric mt-3 text-3xl font-semibold text-[var(--text-primary)]">{positions.length}</p>
               <p className="mt-2 text-sm text-[var(--text-secondary)]">Equity holdings in the selected portfolio.</p>
             </div>
-            <div className="tv-panel rounded-xl p-5">
+            <div className="tv-panel rounded p-5">
               <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Average basis</p>
               <p className="metric mt-3 text-3xl font-semibold text-[var(--text-primary)]">{positions.length ? money(averageCostBasis) : "-"}</p>
               <p className="mt-2 text-sm text-[var(--text-secondary)]">Simple average across tracked stock positions.</p>
             </div>
-            <div className="tv-panel rounded-xl p-5">
+            <div className="tv-panel rounded p-5">
               <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Notional</p>
               <p className="metric mt-3 text-3xl font-semibold text-[var(--text-primary)]">{money(totalNotional)}</p>
               <p className="mt-2 text-sm text-[var(--text-secondary)]">Calculated from shares and cost basis only.</p>
             </div>
           </div>
 
-          <div className="tv-panel rounded-2xl p-5">
+          <div className="tv-panel rounded p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-accent)]">Saved Portfolio Tools</p>
@@ -326,7 +294,7 @@ export default function HomePage() {
                       const nextId = Number(event.target.value);
                       setSelectedPortfolioId(Number.isNaN(nextId) ? null : nextId);
                     }}
-                    className="rounded-md border border-[var(--tv-border)] bg-[var(--tv-bg)] px-4 py-2.5 text-[var(--text-primary)] outline-none transition focus:border-[var(--text-accent)]"
+                    className="rounded border border-[var(--tv-border)] bg-[var(--tv-bg)] px-4 py-2.5 text-[var(--text-primary)] outline-none transition focus:border-[var(--text-accent)]"
                   >
                     {portfolios.map((portfolio) => (
                       <option key={portfolio.id} value={portfolio.id}>
@@ -341,7 +309,7 @@ export default function HomePage() {
                     type="button"
                     onClick={() => setAddModalOpen(true)}
                     disabled={selectedPortfolioId === null || !canUseApi}
-                    className="rounded-md bg-[var(--text-accent)] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#6b9eff] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded bg-[var(--text-accent)] px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Add position
                   </button>
@@ -351,22 +319,24 @@ export default function HomePage() {
           </div>
 
           {loadingPortfolios ? (
-            <div className="tv-panel rounded-xl p-6 text-sm text-[var(--text-secondary)]">
-              Loading portfolios...
+            <div className="tv-panel flex items-center gap-3 rounded p-6 text-sm text-[var(--text-secondary)]">
+              <span className="spinner" />
+              Loading portfolios…
             </div>
           ) : portfolios.length === 0 ? (
-            <div className="tv-panel rounded-xl p-8 text-[var(--text-secondary)]">
+            <div className="tv-panel rounded p-8 text-[var(--text-secondary)]">
               <p className="text-lg font-medium text-[var(--text-primary)]">No portfolios yet</p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-tertiary)]">
                 Create a portfolio in the API first, then return here to save positions and reuse them.
               </p>
             </div>
           ) : loadingPositions ? (
-            <div className="tv-panel rounded-xl p-6 text-sm text-[var(--text-secondary)]">
-              Loading positions...
+            <div className="tv-panel flex items-center gap-3 rounded p-6 text-sm text-[var(--text-secondary)]">
+              <span className="spinner" />
+              Loading positions…
             </div>
           ) : positions.length === 0 ? (
-            <div className="tv-panel rounded-xl p-8 text-[var(--text-secondary)]">
+            <div className="tv-panel rounded p-8 text-[var(--text-secondary)]">
               <p className="text-lg font-medium text-[var(--text-primary)]">No stock positions yet</p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-tertiary)]">
                 Add a position to save names and cost basis alongside the strategy workspace.
@@ -375,7 +345,7 @@ export default function HomePage() {
                 type="button"
                 onClick={() => setAddModalOpen(true)}
                 disabled={!canUseApi}
-                className="mt-5 rounded-md bg-[var(--text-accent)] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#6b9eff] disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-5 rounded bg-[var(--text-accent)] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Add your first position
               </button>
@@ -395,13 +365,13 @@ export default function HomePage() {
       )}
 
       <div className="grid gap-4 xl:grid-cols-[16rem_minmax(0,1fr)]">
-        <aside className="tv-panel rounded-xl p-3">
+        <aside className="tv-panel rounded p-3">
           <div className="border-b border-[var(--tv-border)] px-2 pb-3">
             <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Watchlist</p>
           </div>
           <div className="mt-4 space-y-2">
             {trackedTickers.length === 0 ? (
-              <div className="rounded-md border border-dashed border-[var(--tv-border)] px-4 py-5 text-sm text-[var(--text-tertiary)]">
+              <div className="rounded border border-dashed border-[var(--tv-border)] px-4 py-5 text-sm text-[var(--text-tertiary)]">
                 No tickers added yet.
               </div>
             ) : (
@@ -411,9 +381,9 @@ export default function HomePage() {
                 return (
                   <div
                     key={symbol}
-                    className={`flex items-center justify-between rounded-md border px-3 py-3 transition ${
+                    className={`flex items-center justify-between rounded border px-3 py-3 transition ${
                       isActive
-                        ? "border-[var(--text-accent)] bg-[rgba(76,141,255,0.12)]"
+                        ? "border-[var(--text-accent)] bg-[rgba(0,180,216,0.15)]"
                         : "border-[var(--tv-border)] bg-[var(--tv-surface)] hover:bg-[var(--tv-surface-2)]"
                     }`}
                   >
@@ -427,10 +397,12 @@ export default function HomePage() {
                     <button
                       type="button"
                       onClick={() => removeTicker(symbol)}
-                      className="ml-3 rounded-md border border-[var(--tv-border)] px-2 py-1 text-[11px] uppercase tracking-[0.14em] text-[var(--text-tertiary)] transition hover:bg-[var(--tv-surface-3)] hover:text-[var(--text-primary)]"
+                      className="ml-2 flex h-6 w-6 items-center justify-center rounded border border-[var(--tv-border)] text-[var(--text-tertiary)] transition hover:border-[var(--text-negative)] hover:text-[var(--text-negative)]"
                       aria-label={`Remove ${symbol}`}
                     >
-                      X
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                        <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
                     </button>
                   </div>
                 );

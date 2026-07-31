@@ -3,36 +3,67 @@
 @tailwind utilities;
 
 :root {
-  --tv-bg: #0b0e11;
-  --tv-surface: #11161d;
-  --tv-surface-2: #151b24;
-  --tv-surface-3: #1a212c;
-  --tv-border: #2a2e39;
-  --text-primary: #d9dee7;
-  --text-secondary: #9aa4b2;
-  --text-tertiary: #6f7a89;
-  --text-accent: #4c8dff;
-  --text-positive: #19b39b;
-  --text-negative: #e04f5f;
-  --text-warning: #d38b2c;
+  --tv-bg: #08091a;
+  --tv-surface: #0e1025;
+  --tv-surface-2: #141730;
+  --tv-surface-3: #1c1f3a;
+  --tv-border: #252847;
+  --text-primary: #eef0ff;
+  --text-secondary: #8892b0;
+  --text-tertiary: #4a5278;
+  --text-label: #67e8f9;
+  --text-accent: #00b4d8;
+  --text-positive: #00d2a0;
+  --text-negative: #ff4757;
+  --text-warning: #ffa502;
 }
 
 html {
   color-scheme: dark;
 }
 
+html[data-theme="light"] {
+  color-scheme: light;
+  --tv-bg: #f0f6ff;
+  --tv-surface: #ffffff;
+  --tv-surface-2: #f1f5fb;
+  --tv-surface-3: #e2eaf5;
+  --tv-border: #c8d6ea;
+  --text-primary: #0d1b2e;
+  --text-secondary: #4a6080;
+  --text-tertiary: #8ca0ba;
+  --text-label: #0284c7;
+  --text-accent: #0284c7;
+  --text-positive: #059669;
+  --text-negative: #dc2626;
+  --text-warning: #d97706;
+}
+
+html[data-theme="light"] body {
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.06) 0%, rgba(0, 210, 160, 0.04) 100%), var(--tv-bg);
+}
+
+html[data-theme="light"] .tv-panel {
+  background: var(--tv-surface);
+  box-shadow: 0 1px 4px rgba(13, 27, 46, 0.08);
+}
+
+html[data-theme="light"] .tv-chip {
+  background: rgba(13, 27, 46, 0.04);
+}
+
 body {
   margin: 0;
   min-height: 100vh;
   background:
-    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    radial-gradient(circle at top, rgba(76, 141, 255, 0.08), transparent 24%),
+    radial-gradient(ellipse 80% 55% at 85% -5%, rgba(0, 180, 216, 0.2) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 45% at -5% 100%, rgba(0, 210, 160, 0.14) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 50% 50%, rgba(255, 165, 2, 0.04) 0%, transparent 70%),
     var(--tv-bg);
-  background-size: 24px 24px, 24px 24px, auto, auto;
   color: var(--text-primary);
-  font-family: Inter, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  letter-spacing: 0.005em;
+  font-family: -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu, Arial, sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.003em;
   font-variant-numeric: tabular-nums lining-nums;
   text-rendering: optimizeLegibility;
 }
@@ -60,12 +91,50 @@ textarea {
 }
 
 .tv-panel {
-  background: linear-gradient(180deg, rgba(21, 27, 36, 0.96) 0%, rgba(17, 22, 29, 0.98) 100%);
+  background: linear-gradient(135deg, rgba(0, 180, 216, 0.05) 0%, var(--tv-surface) 60%);
   border: 1px solid var(--tv-border);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
 }
 
 .tv-chip {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--tv-border);
+}
+
+/* Gradient heading text */
+.gradient-heading {
+  background: linear-gradient(135deg, #00b4d8 0%, #00d2a0 55%, #ffa502 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--tv-border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-label);
+}
+
+/* Loading spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--tv-border);
+  border-top-color: var(--text-accent);
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  flex-shrink: 0;
 }

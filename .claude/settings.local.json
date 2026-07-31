@@ -4,7 +4,18 @@
       "Bash(claude plugin:*)",
       "Bash(claude help:*)",
       "Bash(bash:*)",
-      "Bash(cat \"C:/Users/zhaih/claude/options/.superpowers/brainstorm/\"*/state/server-info)"
+      "Bash(cat \"C:/Users/zhaih/claude/options/.superpowers/brainstorm/\"*/state/server-info)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npm --prefix frontend run dev -- --version)",
+      "Bash(ls \"C:/Users/zhaih/claude/options/.claude/worktrees/hardcore-ride/frontend/node_modules/.bin/next\"*)",
+      "Bash(find /c/Users/zhaih/claude/options/.claude/worktrees/hardcore-ride/frontend/node_modules/.bin -name next*)",
+      "Bash(ln -s \"/c/Users/zhaih/claude/options/frontend/node_modules\" \"/c/Users/zhaih/claude/options/.claude/worktrees/hardcore-ride/frontend/node_modules\")",
+      "Bash(ls \"/c/Users/zhaih/claude/options/.claude/worktrees/hardcore-ride/frontend/node_modules/.bin/next\"*)",
+      "mcp__puppeteer__puppeteer_screenshot",
+      "mcp__puppeteer__puppeteer_click",
+      "mcp__puppeteer__puppeteer_hover",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
