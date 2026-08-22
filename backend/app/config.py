@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     github_client_id: str = ""
     github_client_secret: str = ""
+    data_provider: str = "yahoo"
+    polygon_api_key: str = ""
     market_data_cache_ttl_seconds: int = 900
     historical_data_cache_ttl_seconds: int = 3600
     option_chain_cache_ttl_seconds: int = 900
