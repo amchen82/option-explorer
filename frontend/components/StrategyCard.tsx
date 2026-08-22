@@ -19,12 +19,12 @@ const STRATEGY_LABELS: Record<string, string> = {
 };
 
 const STRATEGY_COLORS: Record<string, string> = {
-  covered_call: "#ffd60a",
-  cash_secured_put: "#ff9f1c",
-  protective_put: "#4cc9f0",
-  collar: "#ff85c2",
-  bull_call_spread: "#00d2a0",
-  bear_put_spread: "#ff4d6d",
+  covered_call: "#10b981", // Rich bullish emerald green
+  cash_secured_put: "#3b82f6", // Clean professional blue
+  protective_put: "#60a5fa", // Solid ice-blue protective barrier
+  collar: "#8b5cf6", // Professional royal indigo
+  bull_call_spread: "#12b76a", // Healthy growth green
+  bear_put_spread: "#f04438", // Clear option-risk red
 };
 
 const STRENGTH_STYLES: Record<StrategyResult["recommendation_strength"], string> = {
