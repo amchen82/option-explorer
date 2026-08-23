@@ -65,6 +65,18 @@ export default function Nav() {
               Tutorial
             </Link>
             <Link
+              href="/how-to"
+              className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+            >
+              How To
+            </Link>
+            <Link
+              href="/faq"
+              className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+            >
+              FAQ
+            </Link>
+            <Link
               href="/about"
               className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
             >
