@@ -80,6 +80,7 @@ export default function ScreenshotShowcase() {
               src={item.src}
               alt={item.alt}
               fill
+              unoptimized
               priority={index === 0}
               sizes="(min-width: 1024px) 768px, 100vw"
               className={`object-cover object-top transition-opacity duration-500 ${
