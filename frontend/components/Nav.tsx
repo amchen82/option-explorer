@@ -113,11 +113,7 @@ export default function Nav() {
             )}
           </button>
 
-          {!authEnabled ? (
-            <span className="tv-chip rounded px-2.5 py-1 text-[11px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
-              Public mode
-            </span>
-          ) : session ? (
+          {!authEnabled ? null : session ? (
             <>
               <span className="hidden text-[12px] text-[var(--text-secondary)] md:inline">
                 {session.user?.email}
