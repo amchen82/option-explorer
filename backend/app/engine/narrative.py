@@ -27,7 +27,15 @@ def _money(value: float) -> str:
 # ──────────────────────────────────────────────────────────────────────
 
 
-def _trend_component(above_50dma: bool, above_200dma: bool) -> tuple[float, str]:
+def _trend_component(above_50dma: bool, above_200dma: bool, history_window: str = "1y") -> tuple[float, str]:
+    if history_window == "3mo":
+        score = 0.5 if above_50dma else -0.5
+        direction = "above" if above_50dma else "below"
+        return score, f"Trading {direction} its 50-day average. Only three months of price history are available, so no 200-day trend is assessed."
+
+    if history_window == "30d":
+        return 0.0, "Only 30 days of price history are available, so longer-term moving-average trends are not assessed."
+
     score = (0.5 if above_50dma else -0.5) + (0.5 if above_200dma else -0.5)
 
     if above_50dma and above_200dma:
@@ -65,20 +73,21 @@ def _momentum_component(rsi_14: float) -> tuple[float, str]:
     return score, text
 
 
-def _range_component(price: float, week_52_high: float, week_52_low: float) -> tuple[float, str]:
+def _range_component(price: float, week_52_high: float, week_52_low: float, history_window: str = "1y") -> tuple[float, str]:
+    range_label = {"30d": "30-day", "3mo": "three-month"}.get(history_window, "52-week")
     if week_52_high <= week_52_low or price <= 0:
-        return 0.0, "Not enough 52-week history to place the current price in its range."
+        return 0.0, f"Not enough {range_label} history to place the current price in its range."
 
     position = _clamp((price - week_52_low) / (week_52_high - week_52_low), 0.0, 1.0)
     score = position * 2.0 - 1.0
     pct = position * 100.0
 
     if position >= 0.8:
-        text = f"Near the top of its 52-week range ({pct:.0f}% of the way up) — strength, but limited room before resistance."
+        text = f"Near the top of its {range_label} range ({pct:.0f}% of the way up) — strength, but limited room before resistance."
     elif position <= 0.2:
-        text = f"Near the bottom of its 52-week range ({pct:.0f}% of the way up) — weakness, though closer to potential support."
+        text = f"Near the bottom of its {range_label} range ({pct:.0f}% of the way up) — weakness, though closer to potential support."
     else:
-        text = f"Mid-range, {pct:.0f}% of the way between its 52-week low and high."
+        text = f"Mid-range, {pct:.0f}% of the way between its {range_label} low and high."
 
     return score, text
 
@@ -95,10 +104,11 @@ def market_bias(signals: dict) -> dict:
     above_200dma = bool(signals.get("above_200dma", False))
     week_52_high = float(signals.get("52w_high", 0.0))
     week_52_low = float(signals.get("52w_low", 0.0))
+    history_window = str(signals.get("history_window", "1y"))
 
-    trend_score, trend_text = _trend_component(above_50dma, above_200dma)
+    trend_score, trend_text = _trend_component(above_50dma, above_200dma, history_window)
     momentum_score, momentum_text = _momentum_component(rsi_14)
-    range_score, range_text = _range_component(price, week_52_high, week_52_low)
+    range_score, range_text = _range_component(price, week_52_high, week_52_low, history_window)
 
     score = _clamp((trend_score + momentum_score + range_score) / 3.0)
 
@@ -130,6 +140,8 @@ def explain_volatility(signals: dict) -> dict:
     current_iv = float(signals.get("current_iv", 0.0))
     rank = float(signals.get("iv_rank", 0.0))
     hv_20 = float(signals.get("hv_20", 0.0))
+    history_window = str(signals.get("history_window", "1y"))
+    history_label = {"30d": "30 days", "3mo": "three months"}.get(history_window, "year")
     iv_vs_hv = round(current_iv / hv_20, 2) if hv_20 > 0 else 1.0
 
     if rank >= 70:
@@ -148,7 +160,7 @@ def explain_volatility(signals: dict) -> dict:
     detail = (
         f"Implied volatility is the market's forecast for how much this stock will move. "
         f"An IV rank of {rank:.0f} means it is currently higher than it was on {rank:.0f}% of days "
-        f"in the past year."
+        f"in the past {history_label}."
     )
 
     if implication == "favors_selling":
