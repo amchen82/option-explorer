@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from datetime import date, datetime
+import re
 from typing import Any, Literal
 
 import pandas as pd
@@ -87,27 +88,24 @@ def _strike_interval(price: float) -> float:
     return 10.0
 
 
-def _select_expiration(
-    expirations: list[str], target_dte: int, dte_window: tuple[int, int]
-) -> tuple[date, int] | None:
-    """Pick the listed expiration closest to target_dte within the window."""
-    today = date.today()
-    candidates: list[tuple[date, int]] = []
+_OCC_EXPIRATION_PATTERN = re.compile(r"(\d{6})[CP]\d{8}$")
 
-    for raw in expirations:
-        try:
-            parsed = datetime.strptime(raw, "%Y-%m-%d").date()
-        except (TypeError, ValueError):
+
+def _expiration_from_chain(calls: pd.DataFrame, puts: pd.DataFrame) -> date | None:
+    """Read the OCC expiration embedded in a yfinance contract symbol."""
+    for frame in (calls, puts):
+        if frame is None or frame.empty or "contractSymbol" not in frame:
             continue
 
-        dte = (parsed - today).days
-        if dte_window[0] <= dte <= dte_window[1]:
-            candidates.append((parsed, dte))
-
-    if not candidates:
-        return None
-
-    return min(candidates, key=lambda item: abs(item[1] - target_dte))
+        for symbol in frame["contractSymbol"].dropna():
+            match = _OCC_EXPIRATION_PATTERN.search(str(symbol))
+            if match is None:
+                continue
+            try:
+                return datetime.strptime(match.group(1), "%y%m%d").date()
+            except ValueError:
+                continue
+    return None
 
 
 def _contracts_from_frame(frame: pd.DataFrame, symbol: str, contract_type: str, expiration: date) -> list[Contract]:
@@ -208,9 +206,8 @@ def get_option_chain(
     spot: float,
     iv_estimate: float,
     target_dte: int = 35,
-    dte_window: tuple[int, int] = (21, 60),
 ) -> ChainResult:
-    """Return a normalized option chain for one expiration near target_dte.
+    """Return a normalized chain from yfinance's nearest listed expiration.
 
     Falls back to a modeled Black-Scholes ladder when yfinance is unavailable or
     returns nothing usable. The fallback is never silent: the result carries
@@ -227,14 +224,13 @@ def get_option_chain(
 
     try:
         ticker = yf.Ticker(symbol)
-        expirations = list(ticker.options or [])
-        selected = _select_expiration(expirations, target_dte, dte_window)
+        raw = ticker.option_chain()
+        expiration = _expiration_from_chain(raw.calls, raw.puts)
 
-        if selected is None:
+        if expiration is None:
             result = _modeled_chain(symbol, safe_spot, safe_iv, target_dte)
         else:
-            expiration, dte = selected
-            raw = ticker.option_chain(expiration.isoformat())
+            dte = (expiration - date.today()).days
             calls = _contracts_from_frame(raw.calls, symbol, "call", expiration)
             puts = _contracts_from_frame(raw.puts, symbol, "put", expiration)
 

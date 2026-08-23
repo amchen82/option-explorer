@@ -13,6 +13,8 @@ from app.engine.options_math import historical_volatility, iv_rank
 from app.engine.technicals import calculate_rsi, is_above_ma
 
 _cache: dict[str, dict[str, Any]] = {}
+HISTORY_PERIOD = "30d"
+HISTORY_TRADING_DAYS = 30
 
 
 def _cache_get(key: str, ttl: int):
@@ -26,18 +28,6 @@ def _cache_get(key: str, ttl: int):
 
 def _cache_set(key: str, data):
     _cache[key] = {"ts": time.time(), "data": data}
-
-
-def _quote_from_info(symbol: str, info: dict[str, Any]) -> dict[str, Any]:
-    price = info.get("currentPrice") or info.get("regularMarketPrice") or 0.0
-    return {
-        "symbol": symbol,
-        "price": float(price),
-        "52w_high": float(info.get("fiftyTwoWeekHigh") or 0.0),
-        "52w_low": float(info.get("fiftyTwoWeekLow") or 0.0),
-        "earnings_date": info.get("earningsDate"),
-        "stale": False,
-    }
 
 
 def _latest_close_from_history(history: pd.DataFrame) -> float:
@@ -80,6 +70,24 @@ def _synthetic_quote(symbol: str) -> dict[str, Any]:
 
 
 class MarketDataService:
+    def _get_stock_quote_yahoo(self, symbol: str) -> dict[str, Any]:
+        ticker = yf.Ticker(symbol)
+        history = ticker.history(period=HISTORY_PERIOD)
+        closes = history.get("Close")
+        price = _latest_close_from_history(history)
+
+        if price <= 0.0 or closes is None or closes.dropna().empty:
+            return _synthetic_quote(symbol)
+
+        return {
+            "symbol": symbol,
+            "price": price,
+            "52w_high": float(closes.max()),
+            "52w_low": float(closes.min()),
+            "earnings_date": None,
+            "stale": False,
+        }
+
     def get_stock_quote(self, symbol: str) -> dict[str, Any]:
         key = f"quote:{symbol}"
         cached = _cache_get(key, settings.market_data_cache_ttl_seconds)
@@ -87,15 +95,7 @@ class MarketDataService:
             return cached
 
         try:
-            ticker = yf.Ticker(symbol)
-            data = _quote_from_info(symbol, ticker.info)
-            if data["price"] <= 0.0:
-                history = ticker.history(period="5d")
-                fallback_price = _latest_close_from_history(history)
-                if fallback_price > 0.0:
-                    data = {**data, "price": fallback_price, "stale": True}
-                else:
-                    data = _synthetic_quote(symbol)
+            data = self._get_stock_quote_yahoo(symbol)
             _cache_set(key, data)
             return data
         except Exception:
@@ -114,8 +114,9 @@ class MarketDataService:
 
         try:
             ticker = yf.Ticker(symbol)
-            history = ticker.history(period=f"{days}d")
+            history = ticker.history(period=HISTORY_PERIOD)
             prices = history["Close"].tail(days)
+
             if prices.dropna().empty:
                 prices = _synthetic_history(symbol, days)
         except Exception:
@@ -125,7 +126,7 @@ class MarketDataService:
 
     def get_market_signals(self, symbol: str) -> dict[str, Any]:
         quote = self.get_stock_quote(symbol)
-        prices = self.get_historical_prices(symbol, days=252)
+        prices = self.get_historical_prices(symbol, days=HISTORY_TRADING_DAYS)
         current_price = float(quote["price"])
 
         rsi_14 = calculate_rsi(prices, period=14)
@@ -149,4 +150,5 @@ class MarketDataService:
             "current_iv": round(current_iv, 4),
             "52w_high": quote["52w_high"],
             "52w_low": quote["52w_low"],
+            "history_window": HISTORY_PERIOD,
         }

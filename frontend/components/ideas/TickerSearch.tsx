@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 interface Props {
   initialSymbol?: string;
@@ -10,6 +10,10 @@ interface Props {
 
 export default function TickerSearch({ initialSymbol = "", loading = false, onSearch }: Props) {
   const [value, setValue] = useState(initialSymbol);
+
+  useEffect(() => {
+    setValue(initialSymbol);
+  }, [initialSymbol]);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
