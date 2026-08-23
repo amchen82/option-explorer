@@ -1,5 +1,4 @@
 import Link from "next/link";
-import ScreenshotShowcase from "@/components/ScreenshotShowcase";
 
 const sellingPoints = [
   {
@@ -88,8 +87,19 @@ export default function LandingPage() {
         <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
           A quick look at the tool, the education, and the help along the way.
         </p>
-        <div className="mt-3">
-          <ScreenshotShowcase />
+        <div className="tv-panel mt-3 rounded-xl">
+          <div className="overflow-hidden rounded-lg border border-[var(--tv-border)]">
+            <video
+              className="block w-full"
+              src="/videos/walkthrough.mp4"
+              poster="/videos/walkthrough-poster.jpg"
+              autoPlay
+              muted
+              loop
+              playsInline
+              controls
+            />
+          </div>
         </div>
       </section>
 
