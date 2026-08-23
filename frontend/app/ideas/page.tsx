@@ -64,7 +64,7 @@ export default function IdeasPage() {
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">Options ideas</p>
+          <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">Option ideas</p>
           <h1 className="mt-1 text-2xl font-semibold text-[var(--text-primary)] lg:text-3xl">
             Pick a ticker to explore option ideas
           </h1>
