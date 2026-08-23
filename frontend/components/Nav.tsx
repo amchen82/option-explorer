@@ -57,6 +57,20 @@ export default function Nav() {
             </svg>
             OPTION IDEAS
           </Link>
+          <div className="hidden items-center gap-4 sm:flex">
+            <Link
+              href="/tutorial"
+              className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+            >
+              Tutorial
+            </Link>
+            <Link
+              href="/about"
+              className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+            >
+              About us
+            </Link>
+          </div>
           {authEnabled && session && (
             <div className="hidden items-center gap-4 sm:flex">
               <Link href="/" className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)] transition hover:text-[var(--text-primary)]">
