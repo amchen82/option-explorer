@@ -71,18 +71,6 @@ export default function LandingPage() {
       </header>
 
       <section>
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Why Option Ideas</h2>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {sellingPoints.map((point) => (
-            <article key={point.title} className="tv-panel rounded-xl">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">{point.title}</h3>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{point.description}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section>
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">See it in action</h2>
         <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
           A quick look at the tool, the education, and the help along the way.
@@ -117,6 +105,18 @@ export default function LandingPage() {
         <Link href="/how-to" className="mt-4 inline-flex text-sm font-medium text-[var(--text-accent)] hover:underline">
           Read the full walkthrough &rarr;
         </Link>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Why Option Ideas</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {sellingPoints.map((point) => (
+            <article key={point.title} className="tv-panel rounded-xl">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">{point.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{point.description}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="flex flex-col items-center gap-4 rounded-xl border border-[var(--tv-border)] bg-[var(--tv-surface)] px-6 py-10 text-center">
