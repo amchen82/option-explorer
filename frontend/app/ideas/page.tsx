@@ -53,7 +53,9 @@ export default function IdeasPage() {
   }, []);
 
   useEffect(() => {
-    void search(randomTicker());
+    const selectedSymbol = randomTicker();
+    setSymbol(selectedSymbol);
+    void search(selectedSymbol);
   }, [search]);
 
   const ideas = data?.ideas.filter((idea) => filter === "all" || idea.bias === filter) ?? [];
@@ -64,7 +66,7 @@ export default function IdeasPage() {
         <div>
           <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">Options ideas</p>
           <h1 className="mt-1 text-2xl font-semibold text-[var(--text-primary)] lg:text-3xl">
-            Option ideas for a randomly selected ticker
+            Pick a ticker to explore option ideas
           </h1>
           <p className="mt-1.5 text-sm text-[var(--text-secondary)]">
             Every idea explains its own reasoning, in plain English.
