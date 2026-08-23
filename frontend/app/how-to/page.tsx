@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 const steps = [
@@ -5,21 +6,29 @@ const steps = [
     number: "01",
     title: "Start with an idea",
     description: "Open Option Ideas. The page selects a liquid, widely traded ticker at random, or enter a ticker you want to explore.",
+    image: "/screenshots/howto-1-start.png",
+    alt: "Ticker search box on the Option Ideas page",
   },
   {
     number: "02",
     title: "Read the market snapshot",
     description: "Review the current price, market bias, RSI, short-term range, and volatility context before looking at any strategy.",
+    image: "/screenshots/howto-2-snapshot.png",
+    alt: "Market snapshot and volatility sidebar",
   },
   {
     number: "03",
     title: "Compare trade cards",
     description: "Each card shows the strategy, its maximum profit and loss, probability estimate, capital requirement, and directional bias.",
+    image: "/screenshots/howto-3-compare.png",
+    alt: "Two trade idea cards shown side by side",
   },
   {
     number: "04",
     title: "Open the detail",
     description: "Expand a card to review the option legs, breakeven, Greeks, payoff chart, and the risks that could affect the trade.",
+    image: "/screenshots/howto-4-detail.png",
+    alt: "Expanded trade card showing legs, payoff chart, and Greeks",
   },
 ];
 
@@ -38,7 +47,10 @@ export default function HowToPage() {
 
       <section className="grid gap-3 sm:grid-cols-2">
         {steps.map((step) => (
-          <article key={step.number} className="tv-panel rounded-xl">
+          <article key={step.number} className="tv-panel overflow-hidden rounded-xl">
+            <div className="relative -mx-6 -mt-6 mb-4 h-40 border-b border-[var(--tv-border)] bg-[var(--tv-surface-2)]">
+              <Image src={step.image} alt={step.alt} fill unoptimized className="object-contain p-3" />
+            </div>
             <span className="metric text-xs text-[var(--text-accent)]">{step.number}</span>
             <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">{step.title}</h2>
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{step.description}</p>
