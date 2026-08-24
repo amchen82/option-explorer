@@ -6,7 +6,7 @@ from app.engine.base import BaseStrategy
 from app.engine.options_math import black_scholes_price, calculate_greeks, prob_profit_from_delta
 from app.engine.technicals import earnings_days_away
 
-_TARGET_DTES = (21, 35, 45)
+_TARGET_DTES = (15, 30)
 
 
 def _next_friday(days_out: int) -> date:
