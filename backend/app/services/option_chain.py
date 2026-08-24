@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import re
 from typing import Any, Literal
 
@@ -201,17 +201,36 @@ def _modeled_chain(symbol: str, spot: float, iv: float, target_dte: int) -> Chai
     )
 
 
+def _pick_expiration(available: tuple[str, ...], target_dte: int) -> str:
+    """Return the expiration string whose DTE is closest to *target_dte*.
+
+    yfinance exposes expiration dates as strings in ``YYYY-MM-DD`` format via
+    ``Ticker.options``.  We prefer expirations that are at least 1 day away so
+    that we never accidentally select a same-day (0DTE) expiration when a
+    better choice exists.
+    """
+    today = date.today()
+    target_date = today + timedelta(days=target_dte)
+
+    future = [exp for exp in available if datetime.strptime(exp, "%Y-%m-%d").date() > today]
+    candidates = future if future else list(available)
+
+    return min(candidates, key=lambda exp: abs((datetime.strptime(exp, "%Y-%m-%d").date() - target_date).days))
+
+
 def get_option_chain(
     symbol: str,
     spot: float,
     iv_estimate: float,
     target_dte: int = 35,
 ) -> ChainResult:
-    """Return a normalized chain from yfinance's nearest listed expiration.
+    """Return a normalized chain for the expiration nearest to *target_dte* days out.
 
-    Falls back to a modeled Black-Scholes ladder when yfinance is unavailable or
-    returns nothing usable. The fallback is never silent: the result carries
-    data_quality="modeled".
+    Reads all available expirations from yfinance and selects the one whose DTE
+    is closest to *target_dte*, avoiding same-day (0DTE) expirations whenever a
+    future-dated alternative exists.  Falls back to a modeled Black-Scholes
+    ladder when yfinance is unavailable or returns nothing usable.  The fallback
+    is never silent: the result carries data_quality="modeled".
     """
     symbol = symbol.upper()
     safe_spot = spot if spot > 0 else 100.0
@@ -224,12 +243,19 @@ def get_option_chain(
 
     try:
         ticker = yf.Ticker(symbol)
-        raw = ticker.option_chain()
-        expiration = _expiration_from_chain(raw.calls, raw.puts)
+        available = ticker.options  # tuple of "YYYY-MM-DD" strings, all listed expirations
 
-        if expiration is None:
+        if not available:
             result = _modeled_chain(symbol, safe_spot, safe_iv, target_dte)
         else:
+            chosen_date_str = _pick_expiration(available, target_dte)
+            raw = ticker.option_chain(chosen_date_str)
+            expiration = _expiration_from_chain(raw.calls, raw.puts)
+
+            if expiration is None:
+                # Fall back to the date string we chose rather than giving up entirely.
+                expiration = datetime.strptime(chosen_date_str, "%Y-%m-%d").date()
+
             dte = (expiration - date.today()).days
             calls = _contracts_from_frame(raw.calls, symbol, "call", expiration)
             puts = _contracts_from_frame(raw.puts, symbol, "put", expiration)
