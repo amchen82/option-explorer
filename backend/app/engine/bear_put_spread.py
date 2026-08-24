@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from app.engine.base import BaseStrategy
 from app.engine.options_math import black_scholes_price
 
-_TARGET_DTES = (15, 30)
+_TARGET_DTES = (30, 45)
 
 
 def _next_friday(days_out: int) -> date:
