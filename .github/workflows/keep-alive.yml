@@ -1,0 +1,20 @@
+name: Keep Render services awake
+
+# Render's free plan spins a web service down after ~15 minutes with no
+# incoming traffic, and the next real visitor eats a 30-60s cold start.
+# This just hits both services often enough that Render never sees them idle.
+
+on:
+  schedule:
+    - cron: "*/14 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping frontend (options-web)
+        run: curl -sS -o /dev/null -w "frontend: %{http_code}\n" --max-time 30 https://www.option-ideas.com/
+
+      - name: Ping backend (options-api)
+        run: curl -sS -o /dev/null -w "backend: %{http_code}\n" --max-time 30 https://option-explorer-webservice.onrender.com/health
