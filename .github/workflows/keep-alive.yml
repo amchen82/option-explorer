@@ -14,7 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping frontend (options-web)
-        run: curl -sS -o /dev/null -w "frontend: %{http_code}\n" --max-time 30 https://www.option-ideas.com/
+        run: curl -sS -o /dev/null -w "frontend: %{http_code}\n" --max-time 120 https://www.option-ideas.com/
+        continue-on-error: true
 
       - name: Ping backend (options-api)
-        run: curl -sS -o /dev/null -w "backend: %{http_code}\n" --max-time 30 https://option-explorer-webservice.onrender.com/health
+        run: curl -sS -o /dev/null -w "backend: %{http_code}\n" --max-time 120 https://option-explorer-webservice.onrender.com/health
+        continue-on-error: true
