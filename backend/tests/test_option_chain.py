@@ -12,6 +12,7 @@ from app.services.option_chain import (
     _contracts_from_frame,
     _expiration_from_chain,
     _modeled_chain,
+    _pick_expiration,
     get_option_chain,
 )
 
@@ -31,9 +32,31 @@ def frame(rows: list[dict]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def yf_double(calls: pd.DataFrame, puts: pd.DataFrame):
+def yf_double(calls: pd.DataFrame, puts: pd.DataFrame, options: tuple[str, ...] = ()):
     chain = SimpleNamespace(calls=calls, puts=puts)
-    return SimpleNamespace(option_chain=lambda: chain)
+    return SimpleNamespace(option_chain=lambda date_str=None: chain, options=options)
+
+
+class TestPickExpiration:
+    def test_picks_closest_to_target_dte(self):
+        available = (iso(7), iso(14), iso(30), iso(60))
+        assert _pick_expiration(available, 35) == iso(30)
+
+    def test_prefers_future_over_today(self):
+        available = (iso(0), iso(7), iso(35))
+        assert _pick_expiration(available, 35) == iso(35)
+
+    def test_skips_0dte_when_future_options_exist(self):
+        available = (iso(0), iso(14))
+        assert _pick_expiration(available, 35) == iso(14)
+
+    def test_uses_0dte_when_it_is_the_only_choice(self):
+        available = (iso(0),)
+        assert _pick_expiration(available, 35) == iso(0)
+
+    def test_picks_exact_match_when_available(self):
+        available = (iso(7), iso(35), iso(90))
+        assert _pick_expiration(available, 35) == iso(35)
 
 
 class TestExpirationParsing:
@@ -164,7 +187,7 @@ class TestGetOptionChain:
         )
 
     def test_returns_live_data_when_yfinance_responds(self):
-        double = yf_double(self._rows([225.0, 230.0]), self._rows([225.0, 230.0]))
+        double = yf_double(self._rows([225.0, 230.0]), self._rows([225.0, 230.0]), options=(iso(35),))
 
         with patch.object(option_chain.yf, "Ticker", return_value=double):
             result = get_option_chain("AAPL", 230.0, 0.30)
@@ -173,6 +196,34 @@ class TestGetOptionChain:
         assert len(result.calls) == 2
         assert result.dte == 35
 
+    def test_selects_closest_expiration_to_target_dte(self):
+        rows = frame(
+            [
+                {"contractSymbol": f"AAPL{iso(30)[2:].replace('-', '')}C{int(225 * 1000):08d}", "strike": 225.0, "bid": 5.0, "ask": 5.4, "lastPrice": 5.2, "volume": 100, "openInterest": 500, "impliedVolatility": 0.29},
+                {"contractSymbol": f"AAPL{iso(30)[2:].replace('-', '')}C{int(230 * 1000):08d}", "strike": 230.0, "bid": 5.0, "ask": 5.4, "lastPrice": 5.2, "volume": 100, "openInterest": 500, "impliedVolatility": 0.29},
+            ]
+        )
+        double = yf_double(rows, rows, options=(iso(7), iso(30), iso(60)))
+
+        with patch.object(option_chain.yf, "Ticker", return_value=double):
+            result = get_option_chain("AAPL", 230.0, 0.30, target_dte=35)
+
+        assert result.dte == 30
+
+    def test_skips_0dte_when_future_expirations_exist(self):
+        rows = frame(
+            [
+                {"contractSymbol": f"AAPL{iso(14)[2:].replace('-', '')}C{int(225 * 1000):08d}", "strike": 225.0, "bid": 5.0, "ask": 5.4, "lastPrice": 5.2, "volume": 100, "openInterest": 500, "impliedVolatility": 0.29},
+                {"contractSymbol": f"AAPL{iso(14)[2:].replace('-', '')}C{int(230 * 1000):08d}", "strike": 230.0, "bid": 5.0, "ask": 5.4, "lastPrice": 5.2, "volume": 100, "openInterest": 500, "impliedVolatility": 0.29},
+            ]
+        )
+        double = yf_double(rows, rows, options=(iso(0), iso(14)))
+
+        with patch.object(option_chain.yf, "Ticker", return_value=double):
+            result = get_option_chain("AAPL", 230.0, 0.30, target_dte=35)
+
+        assert result.dte == 14
+
     def test_falls_back_to_modeled_when_yfinance_raises(self):
         with patch.object(option_chain.yf, "Ticker", side_effect=RuntimeError("network down")):
             result = get_option_chain("AAPL", 230.0, 0.30)
@@ -180,23 +231,33 @@ class TestGetOptionChain:
         assert result.data_quality == "modeled"
         assert result.calls
 
-    def test_falls_back_when_contract_symbols_do_not_contain_an_expiration(self):
-        unparseable = frame(
-            [{"contractSymbol": "unknown", "strike": 230.0, "bid": 5.0, "ask": 5.4, "lastPrice": 5.2, "volume": 100, "openInterest": 500, "impliedVolatility": 0.29}]
-        )
-        double = yf_double(unparseable, unparseable)
+    def test_falls_back_when_no_expirations_are_available(self):
+        double = yf_double(pd.DataFrame(), pd.DataFrame(), options=())
 
         with patch.object(option_chain.yf, "Ticker", return_value=double):
             result = get_option_chain("AAPL", 230.0, 0.30)
 
         assert result.data_quality == "modeled"
 
+    def test_falls_back_when_contract_symbols_do_not_contain_an_expiration(self):
+        unparseable = frame(
+            [{"contractSymbol": "unknown", "strike": 230.0, "bid": 5.0, "ask": 5.4, "lastPrice": 5.2, "volume": 100, "openInterest": 500, "impliedVolatility": 0.29}]
+        )
+        double = yf_double(unparseable, unparseable, options=(iso(35),))
+
+        with patch.object(option_chain.yf, "Ticker", return_value=double):
+            result = get_option_chain("AAPL", 230.0, 0.30)
+
+        # Expiration is recovered from the chosen date string; chain is still live.
+        assert result.data_quality == "live"
+        assert result.dte == 35
+
     def test_falls_back_when_the_chain_filters_down_to_nothing(self):
         unquotable = frame(
             [{"strike": 230.0, "bid": 0.0, "ask": 0.0, "lastPrice": 0.0, "volume": 0, "openInterest": 0, "impliedVolatility": 0.0}]
         )
         unquotable["contractSymbol"] = f"AAPL{iso(35)[2:].replace('-', '')}C00230000"
-        double = yf_double(unquotable, unquotable)
+        double = yf_double(unquotable, unquotable, options=(iso(35),))
 
         with patch.object(option_chain.yf, "Ticker", return_value=double):
             result = get_option_chain("AAPL", 230.0, 0.30)
@@ -204,7 +265,7 @@ class TestGetOptionChain:
         assert result.data_quality == "modeled"
 
     def test_second_call_is_served_from_cache(self):
-        double = yf_double(self._rows([230.0]), self._rows([230.0]))
+        double = yf_double(self._rows([230.0]), self._rows([230.0]), options=(iso(35),))
 
         with patch.object(option_chain.yf, "Ticker", return_value=double) as ticker:
             get_option_chain("AAPL", 230.0, 0.30)
