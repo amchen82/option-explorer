@@ -2,9 +2,18 @@
 
 import { useState } from "react";
 import type { Conviction, Idea } from "@/lib/types";
+import Tooltip from "../Tooltip";
 import BiasPill from "./BiasPill";
 import GreeksTable from "./GreeksTable";
 import PayoffChart from "./PayoffChart";
+
+const CHANCE_OF_PROFIT_EXPLANATION =
+  "Estimated from the option's delta — roughly the odds it expires in the money. " +
+  "Short options: 1 minus |delta|. Long options: |delta|.";
+
+const CAPITAL_EXPLANATION =
+  "What this trade ties up: premium paid for a debit trade, cash reserved for a cash-secured put, " +
+  "or the value of shares you already hold for a covered call or collar.";
 
 const CONVICTION_STYLE: Record<Conviction, string> = {
   high: "text-[var(--text-positive)]",
@@ -16,10 +25,22 @@ function money(value: number): string {
   return `${value < 0 ? "-" : ""}$${Math.abs(value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 }
 
-function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
+function Stat({
+  label,
+  value,
+  tone,
+  tooltip,
+}: {
+  label: string;
+  value: string;
+  tone?: string;
+  tooltip?: string;
+}) {
   return (
     <div>
-      <dt className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{label}</dt>
+      <dt className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+        {tooltip ? <Tooltip text={tooltip}>{label}</Tooltip> : label}
+      </dt>
       <dd className={`metric text-sm ${tone ?? "text-[var(--text-primary)]"}`}>{value}</dd>
     </div>
   );
@@ -58,10 +79,20 @@ export default function IdeaCard({ idea, spot }: { idea: Idea; spot: number }) {
             label="Max profit"
             value={idea.max_profit === null ? "Unlimited" : money(idea.max_profit)}
             tone="text-[var(--text-positive)]"
+            tooltip={idea.max_profit_when}
           />
-          <Stat label="Max loss" value={money(idea.max_loss)} tone="text-[var(--text-negative)]" />
-          <Stat label="Chance of profit" value={`${(idea.prob_profit * 100).toFixed(0)}%`} />
-          <Stat label="Capital" value={money(idea.capital_required)} />
+          <Stat
+            label="Max loss"
+            value={money(idea.max_loss)}
+            tone="text-[var(--text-negative)]"
+            tooltip={idea.max_loss_when}
+          />
+          <Stat
+            label="Chance of profit"
+            value={`${(idea.prob_profit * 100).toFixed(0)}%`}
+            tooltip={CHANCE_OF_PROFIT_EXPLANATION}
+          />
+          <Stat label="Capital" value={money(idea.capital_required)} tooltip={CAPITAL_EXPLANATION} />
         </dl>
 
         <p className="mt-2.5 text-[11px] uppercase tracking-[0.12em] text-[var(--text-accent)]">
