@@ -15,8 +15,8 @@ jobs:
     steps:
       - name: Ping frontend (options-web)
         run: |
-          curl -sS -o /dev/null -w "frontend: %{http_code}\n" --max-time 30 https://www.option-ideas.com/
+          curl -sS -o /dev/null -w "frontend: %{http_code}\n" --max-time 300 https://www.option-ideas.com/
 
       - name: Ping backend (options-api)
         run: |
-          curl -sS -o /dev/null -w "backend: %{http_code}\n" --max-time 30 https://option-explorer-webservice.onrender.com/health
+          curl -sS -o /dev/null -w "backend: %{http_code}\n" --max-time 300 https://option-explorer-webservice.onrender.com/health
