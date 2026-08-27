@@ -20,6 +20,11 @@ def svc():
 
 def make_mock_ticker(price=182.50, hist_len=60):
     ticker = MagicMock()
+    ticker.fast_info = {
+        "lastPrice": price,
+        "yearHigh": 220.0,
+        "yearLow": 150.0,
+    }
     ticker.info = {
         "currentPrice": price,
         "fiftyTwoWeekHigh": 220.0,
@@ -85,6 +90,7 @@ def test_stale_data_on_failure(svc, monkeypatch):
 
 def test_get_stock_quote_falls_back_to_previous_close_when_live_price_missing(svc):
     ticker = make_mock_ticker(182.50)
+    ticker.fast_info = {}
     ticker.info = {
         "currentPrice": 0.0,
         "regularMarketPrice": 0.0,
@@ -105,6 +111,7 @@ def test_get_stock_quote_falls_back_to_previous_close_when_live_price_missing(sv
 
 def test_get_stock_quote_uses_synthetic_data_when_yahoo_unavailable(svc):
     ticker = make_mock_ticker(182.50)
+    ticker.fast_info = {}
     ticker.info = {
         "currentPrice": 0.0,
         "regularMarketPrice": 0.0,
@@ -126,6 +133,7 @@ def test_get_stock_quote_uses_synthetic_data_when_yahoo_unavailable(svc):
 
 def test_get_market_signals_uses_stable_synthetic_history_when_yahoo_unavailable(svc):
     ticker = make_mock_ticker(182.50)
+    ticker.fast_info = {}
     ticker.info = {
         "currentPrice": 0.0,
         "regularMarketPrice": 0.0,
