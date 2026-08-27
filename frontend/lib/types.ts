@@ -110,7 +110,9 @@ export interface Idea {
   net_debit_credit: number;
   is_credit: boolean;
   max_profit: number | null;
+  max_profit_when: string;
   max_loss: number;
+  max_loss_when: string;
   breakeven: number;
   prob_profit: number;
   capital_required: number;
