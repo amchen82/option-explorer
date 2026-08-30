@@ -1,12 +1,15 @@
 # Render Blueprint — https://render.com/docs/blueprint-spec
 #
 # Deploy with: Render Dashboard → New → Blueprint → pick this repo.
-# Render reads this file and creates all three services in one go.
+# Render reads this file and creates the database and API service.
 #
-# Two values cannot be derived automatically and are marked `sync: false`,
-# so Render prompts you for them at deploy time. Both are chicken-and-egg:
-# each service needs the other's URL, which does not exist until it is created.
-# Deploy once, copy the two .onrender.com URLs, then fill them in and redeploy.
+# The frontend is hosted on Vercel, not Render — Vercel has no cold-start
+# spin-down on the free tier, which Render's web services do. Point Vercel's
+# project settings at the `frontend/` directory and set NEXT_PUBLIC_API_URL
+# there to this service's URL.
+#
+# CORS_ORIGINS below cannot be derived automatically and is marked
+# `sync: false`, so Render prompts you for it at deploy time.
 
 databases:
   - name: options-db
@@ -35,31 +38,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       # Market prices, history, and option chains are retrieved with yfinance.
-      # Must list the frontend's URL, e.g. https://options-web.onrender.com
+      # Must list the frontend's deployed URL(s), e.g. https://www.option-ideas.com
       # The native app origins (capacitor://localhost) are added in code, not here.
-      # Example: https://option-explorer-webgui.onrender.com
       - key: CORS_ORIGINS
         sync: false
-
-  # ── Frontend: Next.js ───────────────────────────────────────────────
-  - type: web
-    name: options-web
-    runtime: node
-    plan: free
-    rootDir: frontend
-    buildCommand: npm ci && npm run build
-    startCommand: npm start
-    envVars:
-      - key: NODE_VERSION
-        value: "20.18.0"
-      # NEXT_PUBLIC_* is inlined at BUILD time, not read at runtime. Changing
-      # this requires a rebuild, not just a restart — and it is the same value
-      # the iOS/Android builds need. e.g. https://options-api.onrender.com
-      # Example: https://options-api.onrender.com
-      - key: NEXT_PUBLIC_API_URL
-        sync: false
-      # Auth stays off: the ideas flow is public and needs no sign-in.
-      # To enable it, set this to "true" and add NEXTAUTH_URL, NEXTAUTH_SECRET,
-      # and your Google/GitHub OAuth credentials.
-      - key: NEXT_PUBLIC_ENABLE_AUTH
-        value: "false"

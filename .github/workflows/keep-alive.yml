@@ -1,8 +1,11 @@
-name: Keep Render services awake
+name: Keep Render backend awake
 
 # Render's free plan spins a web service down after ~15 minutes with no
 # incoming traffic, and the next real visitor eats a 30-60s cold start.
-# This just hits both services often enough that Render never sees them idle.
+# This just hits the backend often enough that Render never sees it idle.
+#
+# The frontend moved to Vercel, which has no equivalent spin-down, so it no
+# longer needs a keep-alive ping.
 
 on:
   schedule:
@@ -13,10 +16,6 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping frontend (options-web)
-        run: |
-          curl -sS -o /dev/null -w "frontend: %{http_code}\n" --max-time 300 https://www.option-ideas.com/
-
       - name: Ping backend (options-api)
         run: |
-          curl -sS -o /dev/null -w "backend: %{http_code}\n" --max-time 300 https://option-explorer-webservice.onrender.com/health
+          curl -sS --retry 2 --retry-delay 5 -o /dev/null -w "backend: %{http_code}\n" --max-time 300 https://option-explorer-webservice.onrender.com/health
