@@ -10,8 +10,8 @@ import pytest
 from app.services import option_chain
 from app.services.option_chain import (
     _contracts_from_frame,
+    _expiration_from_chain,
     _modeled_chain,
-    _select_expiration,
     get_option_chain,
 )
 
@@ -31,31 +31,21 @@ def frame(rows: list[dict]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def yf_double(calls: pd.DataFrame, puts: pd.DataFrame, expirations: list[str]):
+def yf_double(calls: pd.DataFrame, puts: pd.DataFrame):
     chain = SimpleNamespace(calls=calls, puts=puts)
-    return SimpleNamespace(options=tuple(expirations), option_chain=lambda _: chain)
+    return SimpleNamespace(option_chain=lambda: chain)
 
 
-class TestExpirationSelection:
-    def test_picks_the_expiration_closest_to_target(self):
-        selected = _select_expiration([iso(7), iso(28), iso(40), iso(90)], 35, (21, 60))
+class TestExpirationParsing:
+    def test_reads_expiration_from_an_occ_contract_symbol(self):
+        calls = frame([{"contractSymbol": "AAPL260918C00440000"}])
 
-        assert selected is not None
-        assert selected[1] == 40  # 40 is 5 away from 35; 28 is 7 away
+        assert _expiration_from_chain(calls, pd.DataFrame()) == date(2026, 9, 18)
 
-    def test_ignores_expirations_outside_the_window(self):
-        selected = _select_expiration([iso(3), iso(120)], 35, (21, 60))
+    def test_returns_none_without_a_parseable_contract_symbol(self):
+        calls = frame([{"contractSymbol": "not-a-contract"}])
 
-        assert selected is None
-
-    def test_returns_none_for_an_empty_list(self):
-        assert _select_expiration([], 35, (21, 60)) is None
-
-    def test_unparseable_dates_are_skipped(self):
-        selected = _select_expiration(["not-a-date", iso(30)], 35, (21, 60))
-
-        assert selected is not None
-        assert selected[1] == 30
+        assert _expiration_from_chain(calls, pd.DataFrame()) is None
 
 
 class TestContractNormalization:
@@ -168,13 +158,13 @@ class TestGetOptionChain:
     def _rows(self, strikes: list[float]) -> pd.DataFrame:
         return frame(
             [
-                {"strike": strike, "bid": 5.0, "ask": 5.4, "lastPrice": 5.2, "volume": 100, "openInterest": 500, "impliedVolatility": 0.29}
+                {"contractSymbol": f"AAPL{iso(35)[2:].replace('-', '')}C{int(strike * 1000):08d}", "strike": strike, "bid": 5.0, "ask": 5.4, "lastPrice": 5.2, "volume": 100, "openInterest": 500, "impliedVolatility": 0.29}
                 for strike in strikes
             ]
         )
 
     def test_returns_live_data_when_yfinance_responds(self):
-        double = yf_double(self._rows([225.0, 230.0]), self._rows([225.0, 230.0]), [iso(35)])
+        double = yf_double(self._rows([225.0, 230.0]), self._rows([225.0, 230.0]))
 
         with patch.object(option_chain.yf, "Ticker", return_value=double):
             result = get_option_chain("AAPL", 230.0, 0.30)
@@ -190,8 +180,11 @@ class TestGetOptionChain:
         assert result.data_quality == "modeled"
         assert result.calls
 
-    def test_falls_back_when_no_expiration_is_in_the_window(self):
-        double = yf_double(self._rows([230.0]), self._rows([230.0]), [iso(3)])
+    def test_falls_back_when_contract_symbols_do_not_contain_an_expiration(self):
+        unparseable = frame(
+            [{"contractSymbol": "unknown", "strike": 230.0, "bid": 5.0, "ask": 5.4, "lastPrice": 5.2, "volume": 100, "openInterest": 500, "impliedVolatility": 0.29}]
+        )
+        double = yf_double(unparseable, unparseable)
 
         with patch.object(option_chain.yf, "Ticker", return_value=double):
             result = get_option_chain("AAPL", 230.0, 0.30)
@@ -202,7 +195,8 @@ class TestGetOptionChain:
         unquotable = frame(
             [{"strike": 230.0, "bid": 0.0, "ask": 0.0, "lastPrice": 0.0, "volume": 0, "openInterest": 0, "impliedVolatility": 0.0}]
         )
-        double = yf_double(unquotable, unquotable, [iso(35)])
+        unquotable["contractSymbol"] = f"AAPL{iso(35)[2:].replace('-', '')}C00230000"
+        double = yf_double(unquotable, unquotable)
 
         with patch.object(option_chain.yf, "Ticker", return_value=double):
             result = get_option_chain("AAPL", 230.0, 0.30)
@@ -210,7 +204,7 @@ class TestGetOptionChain:
         assert result.data_quality == "modeled"
 
     def test_second_call_is_served_from_cache(self):
-        double = yf_double(self._rows([230.0]), self._rows([230.0]), [iso(35)])
+        double = yf_double(self._rows([230.0]), self._rows([230.0]))
 
         with patch.object(option_chain.yf, "Ticker", return_value=double) as ticker:
             get_option_chain("AAPL", 230.0, 0.30)

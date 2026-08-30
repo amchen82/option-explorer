@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import IdeaCard from "@/components/ideas/IdeaCard";
 import MarketViewHeader from "@/components/ideas/MarketViewHeader";
 import TickerSearch from "@/components/ideas/TickerSearch";
@@ -16,6 +16,12 @@ const FILTER_LABELS: Record<Filter, string> = {
   bearish: "Bearish",
   neutral: "Neutral",
 };
+
+const DEFAULT_TICKERS = ["AAPL", "NVDA", "GOOG", "TSLA", "META", "SPY", "AMD"];
+
+function randomTicker() {
+  return DEFAULT_TICKERS[Math.floor(Math.random() * DEFAULT_TICKERS.length)];
+}
 
 export default function IdeasPage() {
   const [data, setData] = useState<IdeasResponse | null>(null);
@@ -46,6 +52,10 @@ export default function IdeasPage() {
     }
   }, []);
 
+  useEffect(() => {
+    void search(randomTicker());
+  }, [search]);
+
   const ideas = data?.ideas.filter((idea) => filter === "all" || idea.bias === filter) ?? [];
 
   return (
@@ -54,7 +64,7 @@ export default function IdeasPage() {
         <div>
           <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">Options ideas</p>
           <h1 className="mt-1 text-2xl font-semibold text-[var(--text-primary)] lg:text-3xl">
-            Enter a ticker, see what trades make sense
+            Option ideas for a randomly selected ticker
           </h1>
           <p className="mt-1.5 text-sm text-[var(--text-secondary)]">
             Every idea explains its own reasoning, in plain English.
@@ -62,7 +72,7 @@ export default function IdeasPage() {
         </div>
 
         <div className="w-full lg:max-w-sm">
-          <TickerSearch loading={loading} onSearch={search} />
+          <TickerSearch initialSymbol={symbol ?? ""} loading={loading} onSearch={search} />
         </div>
       </header>
 
@@ -89,7 +99,7 @@ export default function IdeasPage() {
 
       {!data && !loading && !error && (
         <div className="rounded-xl border border-dashed border-[var(--tv-border)] bg-[var(--tv-surface)] px-6 py-12 text-center text-sm text-[var(--text-secondary)]">
-          Try a ticker like AAPL, NVDA, or SPY to see ranked trade ideas.
+          Loading option ideas…
         </div>
       )}
 

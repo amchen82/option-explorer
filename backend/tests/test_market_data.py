@@ -32,19 +32,21 @@ def make_mock_ticker(price=182.50, hist_len=60):
         "earningsDate": None,
     }
     dates = pd.date_range(end="2026-04-01", periods=hist_len, freq="B")
-    prices = price * np.exp(np.cumsum(np.random.normal(0, 0.01, hist_len)))
+    prices = np.linspace(price * 0.8, price, hist_len)
     ticker.history.return_value = pd.DataFrame({"Close": prices}, index=dates)
     return ticker
 
 
 def test_get_stock_quote(svc):
-    with patch("yfinance.Ticker", return_value=make_mock_ticker(182.50)):
+    ticker = make_mock_ticker(182.50)
+    with patch("yfinance.Ticker", return_value=ticker):
         quote = svc.get_stock_quote("AAPL")
 
     assert quote["symbol"] == "AAPL"
     assert quote["price"] == 182.50
     assert "52w_high" in quote
     assert "52w_low" in quote
+    ticker.history.assert_called_once_with(period="30d")
 
 
 def test_get_stock_quote_cached(svc):
@@ -56,11 +58,13 @@ def test_get_stock_quote_cached(svc):
 
 
 def test_get_historical_prices(svc):
-    with patch("yfinance.Ticker", return_value=make_mock_ticker()):
+    ticker = make_mock_ticker()
+    with patch("yfinance.Ticker", return_value=ticker):
         hist = svc.get_historical_prices("AAPL", days=60)
 
     assert isinstance(hist, pd.Series)
     assert len(hist) == 60
+    ticker.history.assert_called_once_with(period="30d")
 
 
 def test_get_market_signals(svc):
@@ -88,7 +92,7 @@ def test_stale_data_on_failure(svc, monkeypatch):
     assert quote.get("stale") is True
 
 
-def test_get_stock_quote_falls_back_to_previous_close_when_live_price_missing(svc):
+def test_get_stock_quote_uses_the_latest_history_close(svc):
     ticker = make_mock_ticker(182.50)
     ticker.fast_info = {}
     ticker.info = {
@@ -106,7 +110,9 @@ def test_get_stock_quote_falls_back_to_previous_close_when_live_price_missing(sv
 
     assert quote["symbol"] == "AAPL"
     assert quote["price"] == 181.40
-    assert quote["stale"] is True
+    assert quote["52w_high"] == 181.40
+    assert quote["52w_low"] == 179.25
+    assert quote["stale"] is False
 
 
 def test_get_stock_quote_uses_synthetic_data_when_yahoo_unavailable(svc):

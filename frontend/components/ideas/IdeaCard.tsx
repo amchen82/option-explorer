@@ -116,6 +116,9 @@ export default function IdeaCard({ idea, spot }: { idea: Idea; spot: number }) {
 
           <section>
             <h4 className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">The trade</h4>
+            <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+              1 contract = 100 shares of the underlying stock.
+            </p>
             <ul className="mt-2 space-y-1.5">
               {idea.legs.map((leg) => (
                 <li
