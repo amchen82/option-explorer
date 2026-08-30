@@ -4,9 +4,29 @@ import NativeChrome from "@/components/NativeChrome";
 import Nav from "@/components/Nav";
 import "./globals.css";
 
+const title = "Option Ideas — Understand an Options Trade Before You Make One";
+const description =
+  "Turn any ticker's market data and option chain into comparable options strategy ideas, each with " +
+  "plain-language reasoning, max profit/loss, and probability of profit. No broker connection, no sign-in.";
+
 export const metadata: Metadata = {
-  title: "Options Strategy Tool",
-  description: "Portfolio options strategy tooling with OAuth sign-in and backend integration.",
+  metadataBase: new URL("https://www.option-ideas.com"),
+  title,
+  description,
+  openGraph: {
+    title,
+    description,
+    url: "/",
+    siteName: "Option Ideas",
+    images: ["/screenshots/ideas.png"],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["/screenshots/ideas.png"],
+  },
 };
 
 export default function RootLayout({
