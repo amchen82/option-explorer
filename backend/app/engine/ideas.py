@@ -134,7 +134,7 @@ def _leg_payload(leg: Leg, spot: float, dte: int, fallback_iv: float) -> dict:
 # ──────────────────────────────────────────────────────────────────────
 
 
-def _build_templates(chain: ChainResult, spot: float, fallback_iv: float) -> list[dict]:
+def _build_templates(chain: ChainResult, spot: float, fallback_iv: float, symbol: str) -> list[dict]:
     """Assemble every strategy whose required strikes actually exist in the chain."""
     calls, puts, dte = chain.calls, chain.puts, chain.dte
     pick_call = lambda target, exclude=None: _select_by_delta(calls, target, spot, dte, fallback_iv, exclude)
@@ -159,6 +159,10 @@ def _build_templates(chain: ChainResult, spot: float, fallback_iv: float) -> lis
                 "requires_shares": 0,
                 "pop": prob_profit_from_delta(_leg_greeks(long_call, spot, dte, fallback_iv)["delta"], "long_call"),
                 "thesis": "A direct bullish bet with a known, capped cost.",
+                "max_profit_when": f"Grows without limit the further {symbol} rises past "
+                f"${long_call.strike + long_call.mid:.2f} by expiration.",
+                "max_loss_when": f"if {symbol} closes at or below ${long_call.strike:g} at expiration "
+                f"(the option expires worthless).",
             }
         )
 
@@ -184,6 +188,9 @@ def _build_templates(chain: ChainResult, spot: float, fallback_iv: float) -> lis
                     "pop": prob_profit_from_delta(_leg_greeks(bcs_long, spot, dte, fallback_iv)["delta"], "long_call"),
                     "thesis": f"Capping the upside at ${bcs_short.strike:g} cuts the cost {savings:.0f}% "
                     f"versus buying the call outright.",
+                    "max_profit_when": f"if {symbol} closes at or above ${bcs_short.strike:g} at expiration.",
+                    "max_loss_when": f"if {symbol} closes at or below ${bcs_long.strike:g} at expiration "
+                    f"(both legs expire worthless).",
                 }
             )
 
@@ -204,6 +211,10 @@ def _build_templates(chain: ChainResult, spot: float, fallback_iv: float) -> lis
                 "pop": prob_profit_from_delta(_leg_greeks(csp, spot, dte, fallback_iv)["delta"], "short_put"),
                 "thesis": f"Get paid to wait. If assigned you buy the stock at an effective "
                 f"${csp.strike - csp.mid:.2f}, below today's ${spot:.2f}.",
+                "max_profit_when": f"if {symbol} closes at or above ${csp.strike:g} at expiration "
+                f"(the put expires worthless and you keep the premium).",
+                "max_loss_when": f"if {symbol} falls to $0 by expiration "
+                f"(worst case — you're assigned the stock at ${csp.strike:g}).",
             }
         )
 
@@ -224,6 +235,9 @@ def _build_templates(chain: ChainResult, spot: float, fallback_iv: float) -> lis
                 "requires_shares": 0,
                 "pop": prob_profit_from_delta(_leg_greeks(long_put, spot, dte, fallback_iv)["delta"], "long_put"),
                 "thesis": "A direct bearish bet, and the cost is the most you can lose.",
+                "max_profit_when": f"if {symbol} falls to $0 by expiration.",
+                "max_loss_when": f"if {symbol} closes at or above ${long_put.strike:g} at expiration "
+                f"(the option expires worthless).",
             }
         )
 
@@ -246,6 +260,9 @@ def _build_templates(chain: ChainResult, spot: float, fallback_iv: float) -> lis
                     "requires_shares": 0,
                     "pop": prob_profit_from_delta(_leg_greeks(bps_long, spot, dte, fallback_iv)["delta"], "long_put"),
                     "thesis": f"A defined-risk bearish bet that pays out fully below ${bps_short.strike:g}.",
+                    "max_profit_when": f"if {symbol} closes at or below ${bps_short.strike:g} at expiration.",
+                    "max_loss_when": f"if {symbol} closes at or above ${bps_long.strike:g} at expiration "
+                    f"(both legs expire worthless).",
                 }
             )
 
@@ -271,6 +288,9 @@ def _build_templates(chain: ChainResult, spot: float, fallback_iv: float) -> lis
                     ),
                     "thesis": f"Collect premium and win as long as the stock stays below "
                     f"${bcall_short.strike:g}. It does not need to fall.",
+                    "max_profit_when": f"if {symbol} closes at or below ${bcall_short.strike:g} at expiration "
+                    f"(both legs expire worthless and you keep the premium).",
+                    "max_loss_when": f"if {symbol} closes at or above ${bcall_long.strike:g} at expiration.",
                 }
             )
 
@@ -292,6 +312,9 @@ def _build_templates(chain: ChainResult, spot: float, fallback_iv: float) -> lis
                 "pop": prob_profit_from_delta(_leg_greeks(cc, spot, dte, fallback_iv)["delta"], "short_call"),
                 "thesis": f"Turn shares you already own into income, in exchange for capping gains "
                 f"above ${cc.strike:g}.",
+                "max_profit_when": f"if {symbol} closes at or above ${cc.strike:g} at expiration "
+                f"(your shares get called away).",
+                "max_loss_when": f"if {symbol} falls to $0 by expiration.",
             }
         )
 
@@ -315,6 +338,8 @@ def _build_templates(chain: ChainResult, spot: float, fallback_iv: float) -> lis
                 ),
                 "thesis": f"Sell an upside call to pay for downside protection, fencing the position "
                 f"between ${collar_put.strike:g} and ${collar_call.strike:g}.",
+                "max_profit_when": f"if {symbol} closes at or above ${collar_call.strike:g} at expiration.",
+                "max_loss_when": f"if {symbol} closes at or below ${collar_put.strike:g} at expiration.",
             }
         )
 
@@ -459,7 +484,7 @@ def generate_ideas(
 
     ideas: list[dict] = []
 
-    for template in _build_templates(chain, spot, fallback_iv):
+    for template in _build_templates(chain, spot, fallback_iv, symbol):
         legs: list[Leg] = template["legs"]
         net_cash = _net_cash(legs)
         is_credit = net_cash > 0
@@ -495,7 +520,9 @@ def generate_ideas(
             "net_debit_credit": net_cash,
             "is_credit": is_credit,
             "max_profit": round(template["max_profit"], 2) if template["max_profit"] is not None else None,
+            "max_profit_when": template["max_profit_when"],
             "max_loss": round(template["max_loss"], 2),
+            "max_loss_when": template["max_loss_when"],
             "breakeven": round(template["breakeven"], 2),
             "prob_profit": template["pop"],
             "capital_required": round(template["capital_required"], 2),

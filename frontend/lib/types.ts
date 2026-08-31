@@ -110,7 +110,9 @@ export interface Idea {
   net_debit_credit: number;
   is_credit: boolean;
   max_profit: number | null;
+  max_profit_when: string;
   max_loss: number;
+  max_loss_when: string;
   breakeven: number;
   prob_profit: number;
   capital_required: number;
@@ -145,11 +147,14 @@ export interface VolatilityView {
   comparison: string;
 }
 
+export type ExpirationBucket = "0d" | "1w" | "2w" | "1m" | "3m" | "6m" | "12m" | "gt12m";
+
 export interface IdeasResponse {
   symbol: string;
   as_of: string;
   data_quality: DataQuality;
   expiration: string;
+  expiration_bucket: ExpirationBucket;
   dte: number;
   quote: { symbol: string; price: number; "52w_high": number; "52w_low": number; stale: boolean };
   market_view: MarketView;

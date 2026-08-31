@@ -149,6 +149,57 @@ class TestStrategyMath:
         assert self._idea(ideas, "long_put")["greeks"]["delta"] < 0
 
 
+class TestProfitLossConditions:
+    """Tooltip copy explaining *when* max profit/loss happens must name the right strike."""
+
+    def _idea(self, ideas, strategy):
+        return next(idea for idea in ideas if idea["strategy"] == strategy)
+
+    def test_every_idea_explains_both_conditions(self, ideas):
+        for idea in ideas:
+            assert idea["max_profit_when"], f"{idea['strategy']} has no max_profit_when"
+            assert idea["max_loss_when"], f"{idea['strategy']} has no max_loss_when"
+            assert "TEST" in idea["max_profit_when"]
+            assert "TEST" in idea["max_loss_when"]
+
+    def test_long_call_max_loss_names_its_strike(self, ideas):
+        call = self._idea(ideas, "long_call")
+        strike = call["legs"][0]["strike"]
+
+        assert f"${strike:g}" in call["max_loss_when"]
+
+    def test_bull_call_spread_conditions_name_each_strike(self, ideas):
+        spread = self._idea(ideas, "bull_call_spread")
+        long_strike, short_strike = sorted(leg["strike"] for leg in spread["legs"])
+
+        assert f"${short_strike:g}" in spread["max_profit_when"]
+        assert f"${long_strike:g}" in spread["max_loss_when"]
+
+    def test_bear_call_spread_conditions_name_each_strike(self, ideas):
+        spread = self._idea(ideas, "bear_call_spread")
+        short_strike, long_strike = sorted(leg["strike"] for leg in spread["legs"])
+
+        assert f"${short_strike:g}" in spread["max_profit_when"]
+        assert f"${long_strike:g}" in spread["max_loss_when"]
+
+    def test_cash_secured_put_max_loss_describes_stock_going_to_zero(self, ideas):
+        csp = self._idea(ideas, "cash_secured_put")
+
+        assert "$0" in csp["max_loss_when"]
+        assert f"${csp['legs'][0]['strike']:g}" in csp["max_profit_when"]
+
+    def test_covered_call_and_collar_name_their_call_strike_for_max_profit(self, ideas):
+        cc = self._idea(ideas, "covered_call")
+        cc_strike = cc["legs"][0]["strike"]
+        assert f"${cc_strike:g}" in cc["max_profit_when"]
+
+        collar = self._idea(ideas, "collar")
+        call_leg = next(leg for leg in collar["legs"] if leg["contract_type"] == "call")
+        put_leg = next(leg for leg in collar["legs"] if leg["contract_type"] == "put")
+        assert f"${call_leg['strike']:g}" in collar["max_profit_when"]
+        assert f"${put_leg['strike']:g}" in collar["max_loss_when"]
+
+
 class TestConvictionScoring:
     def test_ideas_are_sorted_by_conviction(self, ideas):
         scores = [idea["conviction_score"] for idea in ideas]

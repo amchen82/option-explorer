@@ -55,8 +55,8 @@ export const api = {
     },
   },
   ideas: {
-    get: (symbol: string, shares = 0) => {
-      const params = new URLSearchParams({ shares: shares.toString() });
+    get: (symbol: string, shares = 0, expiration = "1m") => {
+      const params = new URLSearchParams({ shares: shares.toString(), expiration });
 
       return apiFetch(`/ideas/${encodeURIComponent(symbol)}?${params.toString()}`);
     },

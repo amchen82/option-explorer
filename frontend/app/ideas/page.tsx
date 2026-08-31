@@ -6,7 +6,7 @@ import MarketViewHeader from "@/components/ideas/MarketViewHeader";
 import TickerSearch from "@/components/ideas/TickerSearch";
 import VolatilityCard from "@/components/ideas/VolatilityCard";
 import { api } from "@/lib/api";
-import type { Bias, IdeasResponse } from "@/lib/types";
+import type { Bias, ExpirationBucket, IdeasResponse } from "@/lib/types";
 
 type Filter = "all" | Bias;
 
@@ -16,6 +16,19 @@ const FILTER_LABELS: Record<Filter, string> = {
   bearish: "Bearish",
   neutral: "Neutral",
 };
+
+const EXPIRATION_LABELS: Record<ExpirationBucket, string> = {
+  "0d": "0 days",
+  "1w": "1 week",
+  "2w": "2 weeks",
+  "1m": "1 month",
+  "3m": "3 months",
+  "6m": "6 months",
+  "12m": "12 months",
+  gt12m: ">12 months",
+};
+
+const EXPIRATION_BUCKETS = Object.keys(EXPIRATION_LABELS) as ExpirationBucket[];
 
 const DEFAULT_TICKERS = ["AAPL", "NVDA", "GOOG", "TSLA", "META", "SPY", "AMD"];
 
@@ -29,14 +42,15 @@ export default function IdeasPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  const [expirationBucket, setExpirationBucket] = useState<ExpirationBucket>("1m");
 
-  const search = useCallback(async (nextSymbol: string) => {
+  const search = useCallback(async (nextSymbol: string, bucket: ExpirationBucket) => {
     setLoading(true);
     setError(null);
     setSymbol(nextSymbol);
 
     try {
-      const response: IdeasResponse = await api.ideas.get(nextSymbol);
+      const response: IdeasResponse = await api.ideas.get(nextSymbol, 0, bucket);
       setData(response);
       setFilter("all");
     } catch (fetchError: unknown) {
@@ -55,8 +69,20 @@ export default function IdeasPage() {
   useEffect(() => {
     const selectedSymbol = randomTicker();
     setSymbol(selectedSymbol);
-    void search(selectedSymbol);
-  }, [search]);
+    void search(selectedSymbol, expirationBucket);
+    // Only run once, on mount, to pick the initial random ticker.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const changeExpiration = useCallback(
+    (bucket: ExpirationBucket) => {
+      setExpirationBucket(bucket);
+      if (symbol) {
+        void search(symbol, bucket);
+      }
+    },
+    [search, symbol],
+  );
 
   const ideas = data?.ideas.filter((idea) => filter === "all" || idea.bias === filter) ?? [];
 
@@ -74,7 +100,11 @@ export default function IdeasPage() {
         </div>
 
         <div className="w-full lg:max-w-sm">
-          <TickerSearch initialSymbol={symbol ?? ""} loading={loading} onSearch={search} />
+          <TickerSearch
+            initialSymbol={symbol ?? ""}
+            loading={loading}
+            onSearch={(nextSymbol) => void search(nextSymbol, expirationBucket)}
+          />
         </div>
       </header>
 
@@ -90,7 +120,7 @@ export default function IdeasPage() {
           {symbol && (
             <button
               type="button"
-              onClick={() => search(symbol)}
+              onClick={() => search(symbol, expirationBucket)}
               className="mt-3 rounded-md border border-[rgba(224,79,95,0.4)] px-3 py-1.5 text-xs uppercase tracking-[0.12em] transition hover:bg-[rgba(224,79,95,0.16)]"
             >
               Try again
@@ -121,6 +151,29 @@ export default function IdeasPage() {
             </aside>
 
             <div className="flex min-w-0 flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+                  Expiration
+                </span>
+                <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+                  {EXPIRATION_BUCKETS.map((bucket) => (
+                    <button
+                      key={bucket}
+                      type="button"
+                      disabled={loading}
+                      onClick={() => changeExpiration(bucket)}
+                      className={`whitespace-nowrap rounded-md border px-3 py-1.5 text-xs transition disabled:opacity-50 ${
+                        expirationBucket === bucket
+                          ? "border-[var(--text-accent)] bg-[rgba(76,141,255,0.18)] text-white"
+                          : "border-[var(--tv-border)] bg-[var(--tv-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                      }`}
+                    >
+                      {EXPIRATION_LABELS[bucket]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex gap-1.5 overflow-x-auto pb-0.5">
                   {(Object.keys(FILTER_LABELS) as Filter[]).map((option) => (
