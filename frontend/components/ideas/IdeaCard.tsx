@@ -38,7 +38,7 @@ function Stat({
 }) {
   return (
     <div>
-      <dt className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+      <dt className="flex min-h-[28px] items-end text-[10px] uppercase leading-[14px] tracking-[0.12em] text-[var(--text-tertiary)]">
         {tooltip ? <Tooltip text={tooltip}>{label}</Tooltip> : label}
       </dt>
       <dd className={`metric text-sm ${tone ?? "text-[var(--text-primary)]"}`}>{value}</dd>
