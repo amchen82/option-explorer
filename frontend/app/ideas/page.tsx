@@ -25,7 +25,7 @@ const EXPIRATION_LABELS: Record<ExpirationBucket, string> = {
   "3m": "3 months",
   "6m": "6 months",
   "12m": "12 months",
-  "12m+": ">12 months",
+  gt12m: ">12 months",
 };
 
 const EXPIRATION_BUCKETS = Object.keys(EXPIRATION_LABELS) as ExpirationBucket[];

@@ -138,7 +138,13 @@ class MarketDataService:
         hv_20 = historical_volatility(prices, window=20)
         hv_60 = historical_volatility(prices, window=60)
 
-        current_iv = hv_20 * 1.1
+        # Tier 1 of the current_iv fallback chain — real ATM IV from a live
+        # option chain — is resolved later in the ideas router, once a chain
+        # exists; this service has no chain access. Historical volatility is
+        # a reasonable Black-Scholes-style vol estimate for tier 2. The old
+        # *1.1 heuristic (realized vol plus a rough volatility-risk-premium
+        # bump) is tier 3, and only applies if hv_20 itself isn't computable.
+        current_iv = hv_20 if hv_20 > 0 else hv_20 * 1.1
         base_vol = float(prices.pct_change().std() * (252 ** 0.5)) if len(prices) > 1 else 0.0
         iv_low = base_vol * 0.9
         iv_high = base_vol * 1.4
@@ -151,6 +157,8 @@ class MarketDataService:
             "hv_60": hv_60,
             "iv_rank": iv_rank(current_iv, iv_low, iv_high),
             "current_iv": round(current_iv, 4),
+            "iv_low": round(iv_low, 4),
+            "iv_high": round(iv_high, 4),
             "52w_high": quote["52w_high"],
             "52w_low": quote["52w_low"],
             "history_window": HISTORY_PERIOD,

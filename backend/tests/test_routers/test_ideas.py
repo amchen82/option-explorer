@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.services import option_chain
 from tests.conftest import SPOT, build_chain
 
 client = TestClient(app)
@@ -27,6 +28,8 @@ SIGNALS = {
     "hv_60": 0.26,
     "iv_rank": 62.0,
     "current_iv": 0.285,
+    "iv_low": 0.20,
+    "iv_high": 0.40,
     "52w_high": 260.0,
     "52w_low": 164.0,
 }
@@ -155,7 +158,7 @@ class TestExpirationParameter:
             ("3m", 90),
             ("6m", 180),
             ("12m", 365),
-            ("12m+", 545),
+            ("gt12m", 545),
         ],
     )
     def test_each_bucket_maps_to_the_right_target_dte(self, bucket, expected_dte):
@@ -173,6 +176,59 @@ class TestExpirationParameter:
 
         assert response.status_code == 400
         assert "expiration" in response.json()["detail"].lower()
+
+
+class TestVolatilityRefinement:
+    """A live chain's own ATM IV should win over market_data's pre-chain estimate."""
+
+    def test_live_chain_atm_iv_overrides_the_pre_chain_estimate(self):
+        # build_chain()'s default contracts all carry implied_volatility=0.30,
+        # distinct from SIGNALS["current_iv"]=0.285 so the two are distinguishable.
+        volatility = fetch(chain=build_chain(data_quality="live")).json()["volatility"]
+
+        assert volatility["current_iv"] == pytest.approx(0.30)
+
+    def test_live_chain_atm_iv_also_refines_iv_rank(self):
+        # iv_rank(0.30, iv_low=0.20, iv_high=0.40) == 50.0, not SIGNALS' pre-chain 62.0.
+        volatility = fetch(chain=build_chain(data_quality="live")).json()["volatility"]
+
+        assert volatility["iv_rank"] == pytest.approx(50.0)
+
+    def test_iv_vs_hv_ratio_is_not_pinned_to_a_fixed_value(self):
+        # Regression test: current_iv used to be defined as hv_20 * 1.1 everywhere,
+        # which made this ratio exactly 1.1x for every ticker, always. With a live
+        # chain's real ATM IV (0.30) against SIGNALS' hv_20 (0.24), it should not be.
+        volatility = fetch(chain=build_chain(data_quality="live")).json()["volatility"]
+
+        assert volatility["iv_vs_hv"] == pytest.approx(0.30 / 0.24, abs=0.01)
+        assert volatility["iv_vs_hv"] != pytest.approx(1.1, abs=0.001)
+
+    def test_modeled_chain_keeps_the_pre_chain_estimate(self):
+        volatility = fetch(chain=build_chain(data_quality="modeled")).json()["volatility"]
+
+        assert volatility["current_iv"] == pytest.approx(0.285)
+        assert volatility["iv_rank"] == pytest.approx(62.0)
+
+    def test_a_live_chain_with_no_usable_iv_keeps_the_pre_chain_estimate(self):
+        contracts = build_chain(data_quality="live")
+        blinded = [
+            *[
+                option_chain.Contract(**{**c.__dict__, "implied_volatility": 0.0})
+                for c in contracts.calls
+            ],
+        ]
+        blind_chain = option_chain.ChainResult(
+            symbol=contracts.symbol,
+            expiration=contracts.expiration,
+            dte=contracts.dte,
+            calls=blinded,
+            puts=[],
+            data_quality="live",
+        )
+
+        volatility = fetch(chain=blind_chain).json()["volatility"]
+
+        assert volatility["current_iv"] == pytest.approx(0.285)
 
 
 class TestErrorHandling:

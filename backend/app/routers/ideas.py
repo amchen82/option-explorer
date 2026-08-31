@@ -8,10 +8,11 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.engine.ideas import generate_ideas
 from app.engine.narrative import explain_volatility, market_bias
+from app.engine.options_math import iv_rank
 from app.engine.technicals import earnings_days_away
 from app.schemas.ideas import IdeasResponse
 from app.services.market_data import MarketDataService
-from app.services.option_chain import get_option_chain
+from app.services.option_chain import atm_implied_volatility, get_option_chain
 
 router = APIRouter(prefix="/ideas", tags=["ideas"])
 market_data_svc = MarketDataService()
@@ -31,7 +32,11 @@ EXPIRATION_BUCKETS: dict[str, int] = {
     "3m": 90,
     "6m": 180,
     "12m": 365,
-    "12m+": 545,
+    # Not "12m+": a literal "+" in a query string is decoded as a space by
+    # naive clients (curl, a hand-typed URL, form-encoded requests), which
+    # would silently turn this into "12m " and 400. URLSearchParams escapes
+    # it correctly, but there is no reason to rely on that.
+    "gt12m": 545,
 }
 
 DISCLAIMER = (
@@ -100,7 +105,6 @@ def get_ideas(
     }
 
     view = market_bias(combined)
-    volatility = explain_volatility(combined)
 
     chain = get_option_chain(
         symbol=normalized,
@@ -108,6 +112,18 @@ def get_ideas(
         iv_estimate=float(signals.get("current_iv", 0.30)),
         target_dte=EXPIRATION_BUCKETS[expiration],
     )
+
+    # Tier 1 of the current_iv fallback chain: a live chain's own ATM implied
+    # volatility beats the pre-chain, history-only estimate market_data
+    # computed above. Refine before generating the narrative and the ideas
+    # themselves, so both benefit from the more accurate reading.
+    if chain.data_quality == "live":
+        atm_iv = atm_implied_volatility(chain, spot)
+        if atm_iv is not None and atm_iv > 0:
+            combined["current_iv"] = atm_iv
+            combined["iv_rank"] = iv_rank(atm_iv, float(signals.get("iv_low", 0.0)), float(signals.get("iv_high", 0.0)))
+
+    volatility = explain_volatility(combined)
 
     ideas = generate_ideas(
         symbol=normalized,

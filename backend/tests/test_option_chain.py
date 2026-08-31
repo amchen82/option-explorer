@@ -9,10 +9,13 @@ import pytest
 
 from app.services import option_chain
 from app.services.option_chain import (
+    ChainResult,
+    Contract,
     _contracts_from_frame,
     _expiration_from_chain,
     _modeled_chain,
     _pick_expiration,
+    atm_implied_volatility,
     get_option_chain,
 )
 
@@ -285,3 +288,69 @@ class TestGetOptionChain:
 
         assert result.data_quality == "modeled"
         assert result.calls
+
+
+def _iv_contract(contract_type: str, strike: float, iv: float) -> Contract:
+    return Contract(
+        symbol="TEST",
+        contract_type=contract_type,
+        strike=strike,
+        expiration=date.today() + timedelta(days=35),
+        bid=1.0,
+        ask=1.1,
+        last=1.05,
+        mid=1.05,
+        volume=100,
+        open_interest=500,
+        implied_volatility=iv,
+    )
+
+
+def _iv_chain(calls: list[Contract], puts: list[Contract], data_quality: str = "live") -> ChainResult:
+    return ChainResult(
+        symbol="TEST",
+        expiration=date.today() + timedelta(days=35),
+        dte=35,
+        calls=calls,
+        puts=puts,
+        data_quality=data_quality,
+    )
+
+
+class TestAtmImpliedVolatility:
+    def test_averages_the_nearest_call_and_put_when_both_are_usable(self):
+        chain = _iv_chain(
+            calls=[_iv_contract("call", 95.0, 0.20), _iv_contract("call", 100.0, 0.30), _iv_contract("call", 105.0, 0.40)],
+            puts=[_iv_contract("put", 95.0, 0.24), _iv_contract("put", 100.0, 0.34), _iv_contract("put", 105.0, 0.44)],
+        )
+
+        assert atm_implied_volatility(chain, spot=100.0) == pytest.approx((0.30 + 0.34) / 2)
+
+    def test_picks_the_strike_closest_to_spot_not_the_first_one(self):
+        chain = _iv_chain(
+            calls=[_iv_contract("call", 90.0, 0.50), _iv_contract("call", 101.0, 0.22)],
+            puts=[],
+        )
+
+        assert atm_implied_volatility(chain, spot=100.0) == pytest.approx(0.22)
+
+    def test_falls_back_to_puts_only_when_calls_have_no_usable_iv(self):
+        chain = _iv_chain(
+            calls=[_iv_contract("call", 100.0, 0.0)],
+            puts=[_iv_contract("put", 100.0, 0.28)],
+        )
+
+        assert atm_implied_volatility(chain, spot=100.0) == pytest.approx(0.28)
+
+    def test_returns_none_when_no_contract_has_a_usable_iv(self):
+        chain = _iv_chain(
+            calls=[_iv_contract("call", 100.0, 0.0)],
+            puts=[_iv_contract("put", 100.0, 0.0)],
+        )
+
+        assert atm_implied_volatility(chain, spot=100.0) is None
+
+    def test_returns_none_for_an_empty_chain(self):
+        chain = _iv_chain(calls=[], puts=[])
+
+        assert atm_implied_volatility(chain, spot=100.0) is None

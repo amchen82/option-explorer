@@ -201,6 +201,28 @@ def _modeled_chain(symbol: str, spot: float, iv: float, target_dte: int) -> Chai
     )
 
 
+def atm_implied_volatility(chain: ChainResult, spot: float) -> float | None:
+    """The best real, market-quoted implied volatility a chain has to offer.
+
+    Averages the nearest-to-the-money call and put IV when both sides have a
+    usable (>0) quote; falls back to whichever single side does. Returns None
+    when nothing in the chain has a usable IV, so callers can fall back to a
+    non-market estimate instead.
+    """
+    readings: list[float] = []
+
+    for contracts in (chain.calls, chain.puts):
+        usable = [contract for contract in contracts if contract.implied_volatility > 0]
+        if not usable:
+            continue
+        nearest = min(usable, key=lambda contract: abs(contract.strike - spot))
+        readings.append(nearest.implied_volatility)
+
+    if not readings:
+        return None
+    return sum(readings) / len(readings)
+
+
 def _pick_expiration(available: tuple[str, ...], target_dte: int) -> str:
     """Return the expiration string whose DTE is closest to *target_dte*.
 

@@ -147,7 +147,7 @@ export interface VolatilityView {
   comparison: string;
 }
 
-export type ExpirationBucket = "0d" | "1w" | "2w" | "1m" | "3m" | "6m" | "12m" | "12m+";
+export type ExpirationBucket = "0d" | "1w" | "2w" | "1m" | "3m" | "6m" | "12m" | "gt12m";
 
 export interface IdeasResponse {
   symbol: string;
