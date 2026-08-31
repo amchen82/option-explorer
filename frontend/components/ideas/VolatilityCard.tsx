@@ -49,7 +49,7 @@ export default function VolatilityCard({ volatility }: { volatility: VolatilityV
           <dd className="text-sm text-[var(--text-primary)]">{(volatility.current_iv * 100).toFixed(1)}%</dd>
         </div>
         <div>
-          <dt className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">Actual (30d)</dt>
+          <dt className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">Actual (20d)</dt>
           <dd className="text-sm text-[var(--text-primary)]">{(volatility.hv_20 * 100).toFixed(1)}%</dd>
         </div>
         <div>
