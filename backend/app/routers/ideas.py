@@ -18,6 +18,22 @@ market_data_svc = MarketDataService()
 
 _SYMBOL_PATTERN = re.compile(r"^[A-Z][A-Z0-9.\-]{0,9}$")
 
+# Approximate target days-to-expiration for each user-facing bucket.
+# get_option_chain() picks the closest expiration Yahoo actually lists, so
+# these are aim points, not guarantees. "1m" (35d) matches the prior
+# unconditional default, so existing behavior is unchanged when the caller
+# omits the expiration param.
+EXPIRATION_BUCKETS: dict[str, int] = {
+    "0d": 0,
+    "1w": 7,
+    "2w": 14,
+    "1m": 35,
+    "3m": 90,
+    "6m": 180,
+    "12m": 365,
+    "12m+": 545,
+}
+
 DISCLAIMER = (
     "Educational tool only. These are illustrative ideas generated from public market data, "
     "not financial advice or a recommendation to trade."
@@ -52,12 +68,22 @@ def _normalize_earnings_date(raw: Any) -> str | None:
 def get_ideas(
     symbol: str,
     shares: int = Query(default=0, ge=0, description="Shares already owned, to mark stock-requiring ideas available"),
+    expiration: str = Query(
+        default="1m",
+        description=f"How far out to look for expirations. One of: {', '.join(EXPIRATION_BUCKETS)}",
+    ),
 ):
     """Ranked option trade ideas for one ticker, with the reasoning behind each."""
     normalized = symbol.strip().upper()
 
     if not _SYMBOL_PATTERN.match(normalized):
         raise HTTPException(status_code=400, detail=f"'{symbol}' is not a valid ticker symbol.")
+
+    if expiration not in EXPIRATION_BUCKETS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{expiration}' is not a valid expiration. Choose one of: {', '.join(EXPIRATION_BUCKETS)}.",
+        )
 
     quote = market_data_svc.get_stock_quote(normalized)
     signals = market_data_svc.get_market_signals(normalized)
@@ -80,6 +106,7 @@ def get_ideas(
         symbol=normalized,
         spot=spot,
         iv_estimate=float(signals.get("current_iv", 0.30)),
+        target_dte=EXPIRATION_BUCKETS[expiration],
     )
 
     ideas = generate_ideas(
@@ -99,6 +126,7 @@ def get_ideas(
         "as_of": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "data_quality": data_quality,
         "expiration": chain.expiration.isoformat(),
+        "expiration_bucket": expiration,
         "dte": chain.dte,
         "quote": {
             "symbol": normalized,

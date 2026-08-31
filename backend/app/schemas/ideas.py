@@ -14,6 +14,7 @@ class IdeasResponse(BaseModel):
     as_of: str
     data_quality: str
     expiration: str
+    expiration_bucket: str
     dte: int
     quote: dict[str, Any]
     market_view: dict[str, Any]

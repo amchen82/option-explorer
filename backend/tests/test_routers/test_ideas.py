@@ -57,6 +57,7 @@ class TestSuccessfulResponse:
             "as_of",
             "data_quality",
             "expiration",
+            "expiration_bucket",
             "dte",
             "quote",
             "market_view",
@@ -132,6 +133,46 @@ class TestDataQuality:
         body = fetch(quote_overrides={"stale": True}).json()
 
         assert body["data_quality"] == "modeled"
+
+
+class TestExpirationParameter:
+    def test_defaults_to_a_month_out(self):
+        with patch("app.routers.ideas.market_data_svc", fake_market_data()), patch(
+            "app.routers.ideas.get_option_chain", return_value=build_chain()
+        ) as mock_chain:
+            response = client.get("/ideas/AAPL")
+
+        assert mock_chain.call_args.kwargs["target_dte"] == 35
+        assert response.json()["expiration_bucket"] == "1m"
+
+    @pytest.mark.parametrize(
+        "bucket,expected_dte",
+        [
+            ("0d", 0),
+            ("1w", 7),
+            ("2w", 14),
+            ("1m", 35),
+            ("3m", 90),
+            ("6m", 180),
+            ("12m", 365),
+            ("12m+", 545),
+        ],
+    )
+    def test_each_bucket_maps_to_the_right_target_dte(self, bucket, expected_dte):
+        with patch("app.routers.ideas.market_data_svc", fake_market_data()), patch(
+            "app.routers.ideas.get_option_chain", return_value=build_chain()
+        ) as mock_chain:
+            response = client.get(f"/ideas/AAPL?expiration={bucket}")
+
+        assert response.status_code == 200
+        assert mock_chain.call_args.kwargs["target_dte"] == expected_dte
+        assert response.json()["expiration_bucket"] == bucket
+
+    def test_unknown_bucket_is_rejected(self):
+        response = fetch("/ideas/AAPL?expiration=9m")
+
+        assert response.status_code == 400
+        assert "expiration" in response.json()["detail"].lower()
 
 
 class TestErrorHandling:

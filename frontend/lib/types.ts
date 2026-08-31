@@ -147,11 +147,14 @@ export interface VolatilityView {
   comparison: string;
 }
 
+export type ExpirationBucket = "0d" | "1w" | "2w" | "1m" | "3m" | "6m" | "12m" | "12m+";
+
 export interface IdeasResponse {
   symbol: string;
   as_of: string;
   data_quality: DataQuality;
   expiration: string;
+  expiration_bucket: ExpirationBucket;
   dte: number;
   quote: { symbol: string; price: number; "52w_high": number; "52w_low": number; stale: boolean };
   market_view: MarketView;
