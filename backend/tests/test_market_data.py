@@ -18,7 +18,7 @@ def svc():
     return MarketDataService()
 
 
-def make_mock_ticker(price=182.50, hist_len=60):
+def make_mock_ticker(price=182.50, hist_len=252):
     ticker = MagicMock()
     dates = pd.date_range(end="2026-04-01", periods=hist_len, freq="B")
     prices = np.linspace(price * 0.8, price, hist_len)
@@ -35,7 +35,7 @@ def test_get_stock_quote(svc):
     assert quote["price"] == 182.50
     assert "52w_high" in quote
     assert "52w_low" in quote
-    ticker.history.assert_called_once_with(period="30d")
+    ticker.history.assert_called_once_with(period="1y")
 
 
 def test_get_stock_quote_cached(svc):
@@ -53,7 +53,15 @@ def test_get_historical_prices(svc):
 
     assert isinstance(hist, pd.Series)
     assert len(hist) == 60
-    ticker.history.assert_called_once_with(period="30d")
+    ticker.history.assert_called_once_with(period="1y")
+
+
+def test_get_historical_prices_can_return_a_full_trading_year(svc):
+    ticker = make_mock_ticker(hist_len=252)
+    with patch("yfinance.Ticker", return_value=ticker):
+        hist = svc.get_historical_prices("AAPL", days=252)
+
+    assert len(hist) == 252
 
 
 def test_get_market_signals(svc):
@@ -64,6 +72,35 @@ def test_get_market_signals(svc):
     assert "above_50dma" in signals
     assert "iv_rank" in signals
     assert "hv_20" in signals
+
+
+def test_get_market_signals_fetches_enough_history_for_60_day_volatility(svc):
+    """hv_60 needs 60+ days of returns; with only 30 days fetched it silently returns 0."""
+    with patch("yfinance.Ticker", return_value=make_mock_ticker(182.50, hist_len=252)):
+        signals = svc.get_market_signals("AAPL")
+
+    assert signals["hv_60"] > 0.0
+
+
+def test_get_market_signals_fetches_enough_history_for_a_real_200dma(svc):
+    """With < 200 days of history, above_200dma silently falls back to averaging
+    whatever's available instead of a real 200-day average.
+
+    Two flat plateaus, 100 for the first 200 (of 252) days then 300 for the last
+    52, are chosen so the two possible answers disagree: the true 200dma sits at
+    152 (mostly-100 plus the recent 300 tail), so today's 300 close is above it.
+    But if the code only ever sees the last 30 days (all 300, past the plateau
+    transition), the fallback average is 300 too, and 300 > 300 is False.
+    """
+    dates = pd.date_range(end="2026-04-01", periods=252, freq="B")
+    prices = np.array([100.0] * 200 + [300.0] * 52)
+    ticker = MagicMock()
+    ticker.history.return_value = pd.DataFrame({"Close": prices}, index=dates)
+
+    with patch("yfinance.Ticker", return_value=ticker):
+        signals = svc.get_market_signals("AAPL")
+
+    assert signals["above_200dma"] is True
 
 
 def test_stale_data_on_failure(svc, monkeypatch):

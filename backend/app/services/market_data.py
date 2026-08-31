@@ -13,8 +13,11 @@ from app.engine.options_math import historical_volatility, iv_rank
 from app.engine.technicals import calculate_rsi, is_above_ma
 
 _cache: dict[str, dict[str, Any]] = {}
-HISTORY_PERIOD = "30d"
-HISTORY_TRADING_DAYS = 30
+# 1 year of daily bars (~252 trading days). above_200dma, hv_60, and the 52w
+# high/low all need a real year of history to mean what their names say —
+# a shorter window doesn't error, it just silently answers from too few days.
+HISTORY_PERIOD = "1y"
+HISTORY_TRADING_DAYS = 252
 
 
 def _cache_get(key: str, ttl: int):
