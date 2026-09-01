@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -11,6 +12,8 @@ import yfinance as yf
 
 from app.config import settings
 from app.engine.options_math import black_scholes_price
+
+logger = logging.getLogger(__name__)
 
 DataQuality = Literal["live", "modeled"]
 
@@ -211,16 +214,28 @@ def atm_implied_volatility(chain: ChainResult, spot: float) -> float | None:
     """
     readings: list[float] = []
 
-    for contracts in (chain.calls, chain.puts):
+    for side, contracts in (("call", chain.calls), ("put", chain.puts)):
         usable = [contract for contract in contracts if contract.implied_volatility > 0]
         if not usable:
+            logger.debug("[%s] atm_implied_volatility: no usable %s IV in chain", chain.symbol, side)
             continue
         nearest = min(usable, key=lambda contract: abs(contract.strike - spot))
+        logger.debug(
+            "[%s] atm_implied_volatility: nearest %s strike=%s (spot=%s) iv=%s",
+            chain.symbol,
+            side,
+            nearest.strike,
+            spot,
+            nearest.implied_volatility,
+        )
         readings.append(nearest.implied_volatility)
 
     if not readings:
+        logger.debug("[%s] atm_implied_volatility: no usable IV on either side", chain.symbol)
         return None
-    return sum(readings) / len(readings)
+    result = sum(readings) / len(readings)
+    logger.debug("[%s] atm_implied_volatility: resolved=%s (from %d reading(s))", chain.symbol, result, len(readings))
+    return result
 
 
 def _pick_expiration(available: tuple[str, ...], target_dte: int) -> str:
@@ -261,13 +276,16 @@ def get_option_chain(
     cache_key = f"chain:{symbol}:{target_dte}"
     cached = _cache_get(cache_key, settings.option_chain_cache_ttl_seconds)
     if cached is not None:
+        logger.debug("[%s] option chain cache hit (target_dte=%d)", symbol, target_dte)
         return cached
 
     try:
         ticker = yf.Ticker(symbol)
         available = ticker.options  # tuple of "YYYY-MM-DD" strings, all listed expirations
+        logger.debug("[%s] yfinance expirations available: %s", symbol, available)
 
         if not available:
+            logger.info("[%s] no expirations listed by yfinance — using modeled chain", symbol)
             result = _modeled_chain(symbol, safe_spot, safe_iv, target_dte)
         else:
             chosen_date_str = _pick_expiration(available, target_dte)
@@ -279,10 +297,26 @@ def get_option_chain(
                 expiration = datetime.strptime(chosen_date_str, "%Y-%m-%d").date()
 
             dte = (expiration - date.today()).days
+            logger.debug(
+                "[%s] chosen expiration=%s (target_dte=%d, actual dte=%d): yfinance raw rows calls=%d puts=%d",
+                symbol,
+                chosen_date_str,
+                target_dte,
+                dte,
+                len(raw.calls),
+                len(raw.puts),
+            )
             calls = _contracts_from_frame(raw.calls, symbol, "call", expiration)
             puts = _contracts_from_frame(raw.puts, symbol, "put", expiration)
+            logger.debug(
+                "[%s] normalized contracts after dropping unquotable rows: calls=%d puts=%d",
+                symbol,
+                len(calls),
+                len(puts),
+            )
 
             if not calls and not puts:
+                logger.info("[%s] no quotable contracts for %s — using modeled chain", symbol, chosen_date_str)
                 result = _modeled_chain(symbol, safe_spot, safe_iv, target_dte)
             else:
                 result = ChainResult(
@@ -294,7 +328,17 @@ def get_option_chain(
                     data_quality="live",
                 )
     except Exception:
+        logger.exception("[%s] option chain fetch failed — using modeled chain", symbol)
         result = _modeled_chain(symbol, safe_spot, safe_iv, target_dte)
 
+    logger.info(
+        "[%s] option chain resolved: data_quality=%s expiration=%s dte=%d calls=%d puts=%d",
+        symbol,
+        result.data_quality,
+        result.expiration,
+        result.dte,
+        len(result.calls),
+        len(result.puts),
+    )
     _cache_set(cache_key, result)
     return result

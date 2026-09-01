@@ -1,8 +1,16 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routers import auth, ideas, import_csv, portfolios, positions, strategies
+
+logging.basicConfig(
+    level=settings.log_level,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    force=True,  # uvicorn configures the root logger before this module ever runs
+)
 
 app = FastAPI(title="Options Strategy Tool")
 

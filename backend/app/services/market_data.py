@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import time
 from typing import Any
 
@@ -11,6 +12,8 @@ import yfinance as yf
 from app.config import settings
 from app.engine.options_math import historical_volatility, iv_rank, realized_vol_band
 from app.engine.technicals import calculate_rsi, is_above_ma
+
+logger = logging.getLogger(__name__)
 
 _cache: dict[str, dict[str, Any]] = {}
 # 1 year of daily bars (~252 trading days). above_200dma, hv_60, and the 52w
@@ -97,10 +100,21 @@ class MarketDataService:
         closes = history.get("Close")
         price = _latest_close_from_history(history)
 
+        logger.debug(
+            "[%s] yfinance quote history(period=%s): %d rows, range %s -> %s, last close=%s",
+            symbol,
+            HISTORY_PERIOD,
+            len(history),
+            history.index[0].date() if not history.empty else None,
+            history.index[-1].date() if not history.empty else None,
+            price,
+        )
+
         if price <= 0.0 or closes is None or closes.dropna().empty:
+            logger.warning("[%s] yfinance quote unusable (price=%s) — using synthetic quote", symbol, price)
             return _synthetic_quote(symbol)
 
-        return {
+        quote = {
             "symbol": symbol,
             "price": price,
             "52w_high": float(closes.max()),
@@ -108,11 +122,14 @@ class MarketDataService:
             "earnings_date": None,
             "stale": False,
         }
+        logger.debug("[%s] computed quote: %s", symbol, quote)
+        return quote
 
     def get_stock_quote(self, symbol: str) -> dict[str, Any]:
         key = f"quote:{symbol}"
         cached = _cache_get(key, settings.market_data_cache_ttl_seconds)
         if cached is not None:
+            logger.debug("[%s] quote cache hit", symbol)
             return cached
 
         try:
@@ -120,8 +137,10 @@ class MarketDataService:
             _cache_set(key, data)
             return data
         except Exception:
+            logger.exception("[%s] yfinance quote fetch failed", symbol)
             stale = _cache.get(key, {}).get("data")
             if stale is not None:
+                logger.warning("[%s] serving stale cached quote after fetch failure", symbol)
                 return {**stale, "stale": True}
             data = _synthetic_quote(symbol)
             _cache_set(key, data)
@@ -131,17 +150,29 @@ class MarketDataService:
         key = f"hist:{symbol}:{days}"
         cached = _cache_get(key, settings.historical_data_cache_ttl_seconds)
         if cached is not None:
+            logger.debug("[%s] historical prices cache hit (days=%d)", symbol, days)
             return cached
 
         try:
             ticker = yf.Ticker(symbol)
             history = ticker.history(period=SIGNALS_HISTORY_PERIOD)
+            logger.debug(
+                "[%s] yfinance signals history(period=%s): %d rows, range %s -> %s",
+                symbol,
+                SIGNALS_HISTORY_PERIOD,
+                len(history),
+                history.index[0].date() if not history.empty else None,
+                history.index[-1].date() if not history.empty else None,
+            )
             prices = history["Close"].tail(days)
 
             if prices.dropna().empty:
+                logger.warning("[%s] yfinance returned no usable closes — using synthetic history", symbol)
                 prices = _synthetic_history(symbol, days)
         except Exception:
+            logger.exception("[%s] yfinance historical prices fetch failed — using synthetic history", symbol)
             prices = _synthetic_history(symbol, days)
+        logger.debug("[%s] historical prices resolved: %d rows (requested days=%d)", symbol, len(prices), days)
         _cache_set(key, prices)
         return prices
 
@@ -155,6 +186,15 @@ class MarketDataService:
         above_200dma = is_above_ma(current_price, prices, period=200)
         hv_20 = historical_volatility(prices, window=20)
         hv_60 = historical_volatility(prices, window=60)
+        logger.debug(
+            "[%s] technicals: rsi_14=%s above_50dma=%s above_200dma=%s hv_20=%s hv_60=%s",
+            symbol,
+            rsi_14,
+            above_50dma,
+            above_200dma,
+            hv_20,
+            hv_60,
+        )
 
         # Tier 1 of the current_iv fallback chain — real ATM IV from a live
         # option chain — is resolved later in the ideas router, once a chain
@@ -162,7 +202,12 @@ class MarketDataService:
         # a reasonable Black-Scholes-style vol estimate for tier 2. The old
         # *1.1 heuristic (realized vol plus a rough volatility-risk-premium
         # bump) is tier 3, and only applies if hv_20 itself isn't computable.
-        current_iv = hv_20 if hv_20 > 0 else hv_20 * 1.1
+        if hv_20 > 0:
+            current_iv = hv_20
+            logger.debug("[%s] current_iv tier 2 (hv_20): %s", symbol, current_iv)
+        else:
+            current_iv = hv_20 * 1.1
+            logger.debug("[%s] current_iv tier 3 (hv_20 * 1.1 fallback): %s", symbol, current_iv)
 
         # The IV rank band: rank current_iv against a real rolling history of
         # its own past values (see realized_vol_band's docstring) rather than
@@ -174,11 +219,20 @@ class MarketDataService:
 
         if band is not None:
             iv_low, iv_high = band
+            logger.debug("[%s] iv_rank band: real rolling history -> low=%s high=%s", symbol, iv_low, iv_high)
         else:
             base_vol = float(prices.pct_change().std() * (252**0.5)) if len(prices) > 1 else 0.0
             iv_low, iv_high = base_vol * 0.9, base_vol * 1.4
+            logger.debug(
+                "[%s] iv_rank band: synthetic fallback (only %d price rows) -> base_vol=%s low=%s high=%s",
+                symbol,
+                len(prices),
+                base_vol,
+                iv_low,
+                iv_high,
+            )
 
-        return {
+        signals = {
             "rsi_14": rsi_14,
             "above_50dma": above_50dma,
             "above_200dma": above_200dma,
@@ -192,3 +246,12 @@ class MarketDataService:
             "52w_low": quote["52w_low"],
             "history_window": HISTORY_PERIOD,
         }
+        logger.info(
+            "[%s] market signals resolved: current_iv=%s iv_rank=%s hv_20=%s rsi_14=%s",
+            symbol,
+            signals["current_iv"],
+            signals["iv_rank"],
+            signals["hv_20"],
+            signals["rsi_14"],
+        )
+        return signals
