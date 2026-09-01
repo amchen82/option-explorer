@@ -66,13 +66,6 @@ export default function IdeaCard({ idea, spot }: { idea: Idea; spot: number }) {
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-base font-semibold text-[var(--text-primary)]">{idea.name}</h3>
           <BiasPill bias={idea.bias} />
-          <span className="ml-auto">
-            <Tooltip text={CONVICTION_EXPLANATION}>
-              <span className={`text-[11px] uppercase tracking-[0.12em] ${CONVICTION_STYLE[idea.conviction]}`}>
-                {(idea.conviction_score * 100).toFixed(0)}% conviction
-              </span>
-            </Tooltip>
-          </span>
         </div>
 
         <p className="mt-1.5 text-sm text-[var(--text-secondary)]">{idea.summary}</p>
@@ -177,6 +170,15 @@ export default function IdeaCard({ idea, spot }: { idea: Idea; spot: number }) {
                 </li>
               ))}
             </ul>
+          </section>
+
+          <section>
+            <h4 className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">
+              <Tooltip text={CONVICTION_EXPLANATION}>Conviction score</Tooltip>
+            </h4>
+            <p className={`metric mt-1 text-lg font-semibold ${CONVICTION_STYLE[idea.conviction]}`}>
+              {(idea.conviction_score * 100).toFixed(0)}%
+            </p>
           </section>
         </div>
       )}
