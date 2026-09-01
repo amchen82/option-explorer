@@ -15,6 +15,11 @@ const CAPITAL_EXPLANATION =
   "What this trade ties up: premium paid for a debit trade, cash reserved for a cash-secured put, " +
   "or the value of shares you already hold for a covered call or collar.";
 
+const CONVICTION_EXPLANATION =
+  "A weighted score, not a guarantee: does the trend agree with this idea's direction (40%), " +
+  "is IV rank favorable for buying or selling here (30%), are the contracts liquid enough to " +
+  "trade at a fair price (20%), and does an earnings report fall inside the trade's life (10%, a penalty if so).";
+
 const CONVICTION_STYLE: Record<Conviction, string> = {
   high: "text-[var(--text-positive)]",
   medium: "text-[var(--text-accent)]",
@@ -61,8 +66,12 @@ export default function IdeaCard({ idea, spot }: { idea: Idea; spot: number }) {
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-base font-semibold text-[var(--text-primary)]">{idea.name}</h3>
           <BiasPill bias={idea.bias} />
-          <span className={`ml-auto text-[11px] uppercase tracking-[0.12em] ${CONVICTION_STYLE[idea.conviction]}`}>
-            {idea.conviction} conviction
+          <span className="ml-auto">
+            <Tooltip text={CONVICTION_EXPLANATION}>
+              <span className={`text-[11px] uppercase tracking-[0.12em] ${CONVICTION_STYLE[idea.conviction]}`}>
+                {(idea.conviction_score * 100).toFixed(0)}% conviction
+              </span>
+            </Tooltip>
           </span>
         </div>
 

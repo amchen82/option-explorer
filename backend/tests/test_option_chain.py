@@ -115,6 +115,36 @@ class TestContractNormalization:
 
         assert contracts[0].mid == pytest.approx(7.5)
 
+    def test_discards_implied_volatility_without_a_live_two_sided_quote(self):
+        # Observed live for both NVDA and AMD while markets were closed:
+        # every contract had bid=ask=0 (lastPrice/volume/openInterest still
+        # held the prior session's real values), and Yahoo's
+        # impliedVolatility field became a degenerate placeholder in that
+        # state -- its values even showed a suspicious doubling pattern
+        # across strikes (0.00001, 0.0156, 0.0313, 0.0625...), not real
+        # market pricing. Downstream consumers (the ideas engine's own
+        # delta-based strike selection, not just the ATM IV helper) trust
+        # Contract.implied_volatility directly, so it must be sanitized
+        # here at the source rather than patched at every call site.
+        contracts = _contracts_from_frame(
+            frame([{"strike": 230, "bid": 0.0, "ask": 0.0, "lastPrice": 7.5, "volume": 1, "openInterest": 10, "impliedVolatility": 0.0625}]),
+            "AAPL",
+            "call",
+            date.today(),
+        )
+
+        assert contracts[0].implied_volatility == 0.0
+
+    def test_keeps_implied_volatility_with_a_live_two_sided_quote(self):
+        contracts = _contracts_from_frame(
+            frame([{"strike": 230, "bid": 8.0, "ask": 8.8, "lastPrice": 8.4, "volume": 340, "openInterest": 1200, "impliedVolatility": 0.28}]),
+            "AAPL",
+            "call",
+            date.today(),
+        )
+
+        assert contracts[0].implied_volatility == pytest.approx(0.28)
+
     def test_nan_values_become_zero(self):
         contracts = _contracts_from_frame(
             frame([{"strike": 230, "bid": 8.0, "ask": 8.8, "lastPrice": 8.4, "volume": float("nan"), "openInterest": float("nan"), "impliedVolatility": float("nan")}]),
