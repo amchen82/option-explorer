@@ -123,7 +123,7 @@ def get_ideas(
     # computed above. Refine before generating the narrative and the ideas
     # themselves, so both benefit from the more accurate reading.
     if chain.data_quality == "live":
-        atm_iv = atm_implied_volatility(chain, spot)
+        atm_iv = atm_implied_volatility(chain, spot, reference_vol=float(signals.get("hv_20", 0.0)))
         if atm_iv is not None and atm_iv > 0:
             logger.debug(
                 "[%s] refining current_iv: pre-chain=%s -> live ATM=%s (pre-chain iv_rank=%s)",

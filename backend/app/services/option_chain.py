@@ -204,20 +204,57 @@ def _modeled_chain(symbol: str, spot: float, iv: float, target_dte: int) -> Chai
     )
 
 
-def atm_implied_volatility(chain: ChainResult, spot: float) -> float | None:
+
+# Real equity option IV is never this low; anything under it is almost
+# certainly a stale or broken Yahoo quote (an empty/degenerate book that
+# still carries a residual impliedVolatility field) rather than a genuine
+# market read.
+MIN_PLAUSIBLE_IV = 0.01
+
+# A reading below this fraction of the stock's own recent realized vol is
+# treated as broken too, not just genuinely cheap. Real IV can legitimately
+# sit well under realized vol -- that's a real, if unusual, market signal --
+# but not by more than an order of magnitude. Observed live: NVDA's chain
+# returned 1.56% IV on its nearest strikes while its own 20-day realized vol
+# was 45% (a ~29x gap, comfortably above MIN_PLAUSIBLE_IV, still garbage).
+# This silently overrode a sound estimate and floor-clamped IV rank to 0.
+MIN_IV_TO_REALIZED_VOL_RATIO = 0.15
+
+
+def atm_implied_volatility(chain: ChainResult, spot: float, reference_vol: float | None = None) -> float | None:
     """The best real, market-quoted implied volatility a chain has to offer.
 
     Averages the nearest-to-the-money call and put IV when both sides have a
-    usable (>0) quote; falls back to whichever single side does. Returns None
+    usable quote; falls back to whichever single side does. Returns None
     when nothing in the chain has a usable IV, so callers can fall back to a
     non-market estimate instead.
+
+    A quote is discarded (as a broken read, not a real market price) if it
+    has no live two-sided quote (bid and ask both need to be > 0 — observed
+    live: with markets closed, every contract's bid/ask go to 0 while
+    lastPrice/volume/openInterest keep the prior session's values, and
+    Yahoo's impliedVolatility field becomes a degenerate placeholder in that
+    state), if it's below MIN_PLAUSIBLE_IV, or if it's below
+    MIN_IV_TO_REALIZED_VOL_RATIO of *reference_vol* — typically the stock's
+    own realized volatility, passed in by the caller since this module has
+    no signals access of its own.
     """
+    min_iv = MIN_PLAUSIBLE_IV
+    if reference_vol and reference_vol > 0:
+        min_iv = max(min_iv, reference_vol * MIN_IV_TO_REALIZED_VOL_RATIO)
+
     readings: list[float] = []
 
     for side, contracts in (("call", chain.calls), ("put", chain.puts)):
-        usable = [contract for contract in contracts if contract.implied_volatility > 0]
+        usable = [
+            contract
+            for contract in contracts
+            if contract.bid > 0 and contract.ask > 0 and contract.implied_volatility > min_iv
+        ]
         if not usable:
-            logger.debug("[%s] atm_implied_volatility: no usable %s IV in chain", chain.symbol, side)
+            logger.debug(
+                "[%s] atm_implied_volatility: no usable %s IV in chain (min_iv=%s)", chain.symbol, side, min_iv
+            )
             continue
         nearest = min(usable, key=lambda contract: abs(contract.strike - spot))
         logger.debug(
