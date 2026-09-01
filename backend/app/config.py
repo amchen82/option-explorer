@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     market_data_cache_ttl_seconds: int = 900
     historical_data_cache_ttl_seconds: int = 3600
     option_chain_cache_ttl_seconds: int = 900
+    # DEBUG surfaces what's fetched from yfinance and each computed signal
+    # (RSI, IV rank, ATM IV, etc). Set LOG_LEVEL=DEBUG to see it locally.
+    log_level: str = "INFO"
 
     @property
     def cors_origins_list(self) -> list[str]:

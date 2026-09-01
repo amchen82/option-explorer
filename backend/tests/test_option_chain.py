@@ -290,14 +290,14 @@ class TestGetOptionChain:
         assert result.calls
 
 
-def _iv_contract(contract_type: str, strike: float, iv: float) -> Contract:
+def _iv_contract(contract_type: str, strike: float, iv: float, *, bid: float = 1.0, ask: float = 1.1) -> Contract:
     return Contract(
         symbol="TEST",
         contract_type=contract_type,
         strike=strike,
         expiration=date.today() + timedelta(days=35),
-        bid=1.0,
-        ask=1.1,
+        bid=bid,
+        ask=ask,
         last=1.05,
         mid=1.05,
         volume=100,
@@ -352,5 +352,87 @@ class TestAtmImpliedVolatility:
 
     def test_returns_none_for_an_empty_chain(self):
         chain = _iv_chain(calls=[], puts=[])
+
+        assert atm_implied_volatility(chain, spot=100.0) is None
+
+    def test_skips_a_nearest_contract_with_an_implausibly_low_absolute_iv(self):
+        # A near-zero IV (e.g. 0.001%) is a stale/broken Yahoo quote, not a
+        # real market read -- a genuine option is never priced for that
+        # little expected movement. Should fall through to the next-nearest
+        # call with a plausible reading rather than trusting the garbage one.
+        chain = _iv_chain(
+            calls=[_iv_contract("call", 100.0, 0.00001), _iv_contract("call", 105.0, 0.35)],
+            puts=[],
+        )
+
+        assert atm_implied_volatility(chain, spot=100.0) == pytest.approx(0.35)
+
+    def test_returns_none_when_every_reading_is_implausibly_low(self):
+        chain = _iv_chain(
+            calls=[_iv_contract("call", 100.0, 0.00001)],
+            puts=[_iv_contract("put", 100.0, 0.0039)],
+        )
+
+        assert atm_implied_volatility(chain, spot=100.0) is None
+
+    def test_skips_a_reading_far_below_the_stocks_own_realized_vol(self):
+        # Observed live: NVDA's chain returned 1.56% IV on its nearest
+        # strikes while the stock's own 20-day realized vol was 45% -- a
+        # ~29x gap. A fixed absolute floor (e.g. 1%) doesn't catch this;
+        # the check needs to be relative to what's plausible for *this*
+        # stock. Should fall through to the next-nearest call instead.
+        chain = _iv_chain(
+            calls=[_iv_contract("call", 100.0, 0.0156), _iv_contract("call", 105.0, 0.40)],
+            puts=[],
+        )
+
+        assert atm_implied_volatility(chain, spot=100.0, reference_vol=0.45) == pytest.approx(0.40)
+
+    def test_keeps_a_reading_legitimately_cheaper_than_realized_vol(self):
+        # Real IV can genuinely sit well below realized vol (a stock that
+        # was choppy and has since calmed down) -- only an extreme gap
+        # should be treated as a broken quote, not any gap at all.
+        chain = _iv_chain(calls=[_iv_contract("call", 100.0, 0.30)], puts=[])
+
+        assert atm_implied_volatility(chain, spot=100.0, reference_vol=0.45) == pytest.approx(0.30)
+
+    def test_returns_none_when_every_reading_is_implausible_relative_to_realized_vol(self):
+        chain = _iv_chain(
+            calls=[_iv_contract("call", 100.0, 0.0156)],
+            puts=[_iv_contract("put", 100.0, 0.02)],
+        )
+
+        assert atm_implied_volatility(chain, spot=100.0, reference_vol=0.45) is None
+
+    def test_without_a_reference_vol_only_the_absolute_floor_applies(self):
+        # Backward compatible: callers that don't have a realized-vol handy
+        # (or pass 0/None) still get the coarser absolute-floor screening.
+        chain = _iv_chain(calls=[_iv_contract("call", 100.0, 0.0156)], puts=[])
+
+        assert atm_implied_volatility(chain, spot=100.0) == pytest.approx(0.0156)
+        assert atm_implied_volatility(chain, spot=100.0, reference_vol=0.0) == pytest.approx(0.0156)
+
+    def test_ignores_a_contract_with_no_live_bid_and_ask(self):
+        # Root cause observed live: when a chain has no live market (e.g.
+        # fetched while markets are closed), every contract's bid and ask
+        # go to 0 while lastPrice/volume/openInterest keep the prior
+        # session's values -- and Yahoo's impliedVolatility field becomes a
+        # degenerate placeholder in that state, not a real reading, no
+        # matter its magnitude. A real two-sided quote is required.
+        chain = _iv_chain(
+            calls=[
+                _iv_contract("call", 100.0, 0.45, bid=0.0, ask=0.0),
+                _iv_contract("call", 110.0, 0.40, bid=1.0, ask=1.1),
+            ],
+            puts=[],
+        )
+
+        assert atm_implied_volatility(chain, spot=100.0) == pytest.approx(0.40)
+
+    def test_returns_none_when_nothing_has_a_live_two_sided_quote(self):
+        chain = _iv_chain(
+            calls=[_iv_contract("call", 100.0, 0.45, bid=0.0, ask=0.0)],
+            puts=[_iv_contract("put", 100.0, 0.40, bid=0.0, ask=0.0)],
+        )
 
         assert atm_implied_volatility(chain, spot=100.0) is None

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 from datetime import datetime, timezone
 from typing import Any
@@ -13,6 +14,8 @@ from app.engine.technicals import earnings_days_away
 from app.schemas.ideas import IdeasResponse
 from app.services.market_data import MarketDataService
 from app.services.option_chain import atm_implied_volatility, get_option_chain
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ideas", tags=["ideas"])
 market_data_svc = MarketDataService()
@@ -80,6 +83,7 @@ def get_ideas(
 ):
     """Ranked option trade ideas for one ticker, with the reasoning behind each."""
     normalized = symbol.strip().upper()
+    logger.info("[%s] GET /ideas — shares=%d expiration=%s", normalized, shares, expiration)
 
     if not _SYMBOL_PATTERN.match(normalized):
         raise HTTPException(status_code=400, detail=f"'{symbol}' is not a valid ticker symbol.")
@@ -96,6 +100,7 @@ def get_ideas(
     spot = float(quote.get("price") or 0.0)
     if spot <= 0:
         raise HTTPException(status_code=404, detail=f"No market data available for '{normalized}'.")
+    logger.debug("[%s] quote=%s signals=%s", normalized, quote, signals)
 
     combined = {
         **quote,
@@ -118,12 +123,30 @@ def get_ideas(
     # computed above. Refine before generating the narrative and the ideas
     # themselves, so both benefit from the more accurate reading.
     if chain.data_quality == "live":
-        atm_iv = atm_implied_volatility(chain, spot)
+        atm_iv = atm_implied_volatility(chain, spot, reference_vol=float(signals.get("hv_20", 0.0)))
         if atm_iv is not None and atm_iv > 0:
+            logger.debug(
+                "[%s] refining current_iv: pre-chain=%s -> live ATM=%s (pre-chain iv_rank=%s)",
+                normalized,
+                signals.get("current_iv"),
+                atm_iv,
+                signals.get("iv_rank"),
+            )
             combined["current_iv"] = atm_iv
             combined["iv_rank"] = iv_rank(atm_iv, float(signals.get("iv_low", 0.0)), float(signals.get("iv_high", 0.0)))
+        else:
+            logger.debug("[%s] live chain has no usable ATM IV — keeping pre-chain current_iv", normalized)
+    else:
+        logger.debug("[%s] chain is modeled — keeping pre-chain current_iv", normalized)
 
     volatility = explain_volatility(combined)
+    logger.info(
+        "[%s] final volatility: current_iv=%s iv_rank=%s regime=%s",
+        normalized,
+        volatility.get("current_iv"),
+        volatility.get("iv_rank"),
+        volatility.get("regime"),
+    )
 
     ideas = generate_ideas(
         symbol=normalized,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -11,6 +12,8 @@ import yfinance as yf
 
 from app.config import settings
 from app.engine.options_math import black_scholes_price
+
+logger = logging.getLogger(__name__)
 
 DataQuality = Literal["live", "modeled"]
 
@@ -201,26 +204,75 @@ def _modeled_chain(symbol: str, spot: float, iv: float, target_dte: int) -> Chai
     )
 
 
-def atm_implied_volatility(chain: ChainResult, spot: float) -> float | None:
+
+# Real equity option IV is never this low; anything under it is almost
+# certainly a stale or broken Yahoo quote (an empty/degenerate book that
+# still carries a residual impliedVolatility field) rather than a genuine
+# market read.
+MIN_PLAUSIBLE_IV = 0.01
+
+# A reading below this fraction of the stock's own recent realized vol is
+# treated as broken too, not just genuinely cheap. Real IV can legitimately
+# sit well under realized vol -- that's a real, if unusual, market signal --
+# but not by more than an order of magnitude. Observed live: NVDA's chain
+# returned 1.56% IV on its nearest strikes while its own 20-day realized vol
+# was 45% (a ~29x gap, comfortably above MIN_PLAUSIBLE_IV, still garbage).
+# This silently overrode a sound estimate and floor-clamped IV rank to 0.
+MIN_IV_TO_REALIZED_VOL_RATIO = 0.15
+
+
+def atm_implied_volatility(chain: ChainResult, spot: float, reference_vol: float | None = None) -> float | None:
     """The best real, market-quoted implied volatility a chain has to offer.
 
     Averages the nearest-to-the-money call and put IV when both sides have a
-    usable (>0) quote; falls back to whichever single side does. Returns None
+    usable quote; falls back to whichever single side does. Returns None
     when nothing in the chain has a usable IV, so callers can fall back to a
     non-market estimate instead.
+
+    A quote is discarded (as a broken read, not a real market price) if it
+    has no live two-sided quote (bid and ask both need to be > 0 — observed
+    live: with markets closed, every contract's bid/ask go to 0 while
+    lastPrice/volume/openInterest keep the prior session's values, and
+    Yahoo's impliedVolatility field becomes a degenerate placeholder in that
+    state), if it's below MIN_PLAUSIBLE_IV, or if it's below
+    MIN_IV_TO_REALIZED_VOL_RATIO of *reference_vol* — typically the stock's
+    own realized volatility, passed in by the caller since this module has
+    no signals access of its own.
     """
+    min_iv = MIN_PLAUSIBLE_IV
+    if reference_vol and reference_vol > 0:
+        min_iv = max(min_iv, reference_vol * MIN_IV_TO_REALIZED_VOL_RATIO)
+
     readings: list[float] = []
 
-    for contracts in (chain.calls, chain.puts):
-        usable = [contract for contract in contracts if contract.implied_volatility > 0]
+    for side, contracts in (("call", chain.calls), ("put", chain.puts)):
+        usable = [
+            contract
+            for contract in contracts
+            if contract.bid > 0 and contract.ask > 0 and contract.implied_volatility > min_iv
+        ]
         if not usable:
+            logger.debug(
+                "[%s] atm_implied_volatility: no usable %s IV in chain (min_iv=%s)", chain.symbol, side, min_iv
+            )
             continue
         nearest = min(usable, key=lambda contract: abs(contract.strike - spot))
+        logger.debug(
+            "[%s] atm_implied_volatility: nearest %s strike=%s (spot=%s) iv=%s",
+            chain.symbol,
+            side,
+            nearest.strike,
+            spot,
+            nearest.implied_volatility,
+        )
         readings.append(nearest.implied_volatility)
 
     if not readings:
+        logger.debug("[%s] atm_implied_volatility: no usable IV on either side", chain.symbol)
         return None
-    return sum(readings) / len(readings)
+    result = sum(readings) / len(readings)
+    logger.debug("[%s] atm_implied_volatility: resolved=%s (from %d reading(s))", chain.symbol, result, len(readings))
+    return result
 
 
 def _pick_expiration(available: tuple[str, ...], target_dte: int) -> str:
@@ -261,13 +313,16 @@ def get_option_chain(
     cache_key = f"chain:{symbol}:{target_dte}"
     cached = _cache_get(cache_key, settings.option_chain_cache_ttl_seconds)
     if cached is not None:
+        logger.debug("[%s] option chain cache hit (target_dte=%d)", symbol, target_dte)
         return cached
 
     try:
         ticker = yf.Ticker(symbol)
         available = ticker.options  # tuple of "YYYY-MM-DD" strings, all listed expirations
+        logger.debug("[%s] yfinance expirations available: %s", symbol, available)
 
         if not available:
+            logger.info("[%s] no expirations listed by yfinance — using modeled chain", symbol)
             result = _modeled_chain(symbol, safe_spot, safe_iv, target_dte)
         else:
             chosen_date_str = _pick_expiration(available, target_dte)
@@ -279,10 +334,26 @@ def get_option_chain(
                 expiration = datetime.strptime(chosen_date_str, "%Y-%m-%d").date()
 
             dte = (expiration - date.today()).days
+            logger.debug(
+                "[%s] chosen expiration=%s (target_dte=%d, actual dte=%d): yfinance raw rows calls=%d puts=%d",
+                symbol,
+                chosen_date_str,
+                target_dte,
+                dte,
+                len(raw.calls),
+                len(raw.puts),
+            )
             calls = _contracts_from_frame(raw.calls, symbol, "call", expiration)
             puts = _contracts_from_frame(raw.puts, symbol, "put", expiration)
+            logger.debug(
+                "[%s] normalized contracts after dropping unquotable rows: calls=%d puts=%d",
+                symbol,
+                len(calls),
+                len(puts),
+            )
 
             if not calls and not puts:
+                logger.info("[%s] no quotable contracts for %s — using modeled chain", symbol, chosen_date_str)
                 result = _modeled_chain(symbol, safe_spot, safe_iv, target_dte)
             else:
                 result = ChainResult(
@@ -294,7 +365,17 @@ def get_option_chain(
                     data_quality="live",
                 )
     except Exception:
+        logger.exception("[%s] option chain fetch failed — using modeled chain", symbol)
         result = _modeled_chain(symbol, safe_spot, safe_iv, target_dte)
 
+    logger.info(
+        "[%s] option chain resolved: data_quality=%s expiration=%s dte=%d calls=%d puts=%d",
+        symbol,
+        result.data_quality,
+        result.expiration,
+        result.dte,
+        len(result.calls),
+        len(result.puts),
+    )
     _cache_set(cache_key, result)
     return result
