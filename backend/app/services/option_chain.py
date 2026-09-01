@@ -132,6 +132,15 @@ def _contracts_from_frame(frame: pd.DataFrame, symbol: str, contract_type: str, 
 
         mid = (bid + ask) / 2.0 if bid > 0 and ask > 0 else last
 
+        # Without a live two-sided quote, Yahoo's impliedVolatility field is
+        # a degenerate placeholder, not a real reading (observed live: a
+        # suspicious doubling pattern across strikes when a whole chain's
+        # bid/ask were 0). Every consumer downstream -- the ideas engine's
+        # own delta-based strike selection, not just the ATM IV helper --
+        # trusts this field directly, so it's sanitized once here rather
+        # than patched at each call site.
+        implied_volatility = _clean_float(row.get("impliedVolatility")) if bid > 0 and ask > 0 else 0.0
+
         contracts.append(
             Contract(
                 symbol=symbol,
@@ -144,7 +153,7 @@ def _contracts_from_frame(frame: pd.DataFrame, symbol: str, contract_type: str, 
                 mid=mid,
                 volume=_clean_int(row.get("volume")),
                 open_interest=_clean_int(row.get("openInterest")),
-                implied_volatility=_clean_float(row.get("impliedVolatility")),
+                implied_volatility=implied_volatility,
             )
         )
 
