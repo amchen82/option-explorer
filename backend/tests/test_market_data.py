@@ -53,7 +53,7 @@ def test_get_historical_prices(svc):
 
     assert isinstance(hist, pd.Series)
     assert len(hist) == 60
-    ticker.history.assert_called_once_with(period="1y")
+    ticker.history.assert_called_once_with(period="2y")
 
 
 def test_get_historical_prices_can_return_a_full_trading_year(svc):
@@ -101,6 +101,29 @@ def test_get_market_signals_fetches_enough_history_for_a_real_200dma(svc):
         signals = svc.get_market_signals("AAPL")
 
     assert signals["above_200dma"] is True
+
+
+def test_get_market_signals_iv_rank_reflects_a_real_volatility_regime_change(svc):
+    """A stock that was choppy for months and has since gone quiet should not
+    have today's calm floor-clamped to iv_rank=0. The old synthetic band was
+    built from a single point-in-time number (the stock's overall realized
+    vol), so a recent calm stretch could sit below the band's own low end and
+    clamp to 0. Ranking against the real trailing swing of volatility -- not
+    a multiplier band -- should place today's reading above the very bottom.
+    """
+    rng = np.random.default_rng(42)
+    volatile_returns = rng.normal(0, 0.04, 220)
+    calm_returns = rng.normal(0, 0.01, 100)
+    prices_values = 100 * np.exp(np.cumsum(np.concatenate([volatile_returns, calm_returns])))
+    dates = pd.date_range(end="2026-04-01", periods=len(prices_values), freq="B")
+
+    ticker = MagicMock()
+    ticker.history.return_value = pd.DataFrame({"Close": prices_values}, index=dates)
+
+    with patch("yfinance.Ticker", return_value=ticker):
+        signals = svc.get_market_signals("NVDA")
+
+    assert signals["iv_rank"] > 5.0
 
 
 def test_stale_data_on_failure(svc, monkeypatch):

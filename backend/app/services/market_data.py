@@ -9,7 +9,7 @@ import pandas as pd
 import yfinance as yf
 
 from app.config import settings
-from app.engine.options_math import historical_volatility, iv_rank
+from app.engine.options_math import historical_volatility, iv_rank, realized_vol_band
 from app.engine.technicals import calculate_rsi, is_above_ma
 
 _cache: dict[str, dict[str, Any]] = {}
@@ -18,6 +18,24 @@ _cache: dict[str, dict[str, Any]] = {}
 # a shorter window doesn't error, it just silently answers from too few days.
 HISTORY_PERIOD = "1y"
 HISTORY_TRADING_DAYS = 252
+
+# A longer fetch reserved for get_market_signals(), so IV rank can compare
+# today's volatility against a real rolling history of its own past values
+# instead of a synthetic multiplier band. A 20-day rolling window consumes
+# its first 20 days as warm-up, so ranking a full trailing year of that
+# series (IV_RANK_LOOKBACK_DAYS) needs meaningfully more than a year of raw
+# price history. Every other signal computed from this series (RSI, moving
+# averages, hv_20/hv_60) only reads its own trailing window regardless of
+# how much extra history precedes it, so the longer fetch doesn't change
+# their meaning — it only gives IV rank room to work with.
+SIGNALS_HISTORY_PERIOD = "2y"
+SIGNALS_FETCH_DAYS = 300
+IV_RANK_WINDOW = 20
+IV_RANK_LOOKBACK_DAYS = 252
+# Below this many rolling readings, a real band is more noise than signal
+# (e.g. a stock that only IPO'd a few weeks ago) — fall back to the old
+# synthetic band rather than rank against a handful of data points.
+IV_RANK_MIN_READINGS = 20
 
 
 def _cache_get(key: str, ttl: int):
@@ -117,7 +135,7 @@ class MarketDataService:
 
         try:
             ticker = yf.Ticker(symbol)
-            history = ticker.history(period=HISTORY_PERIOD)
+            history = ticker.history(period=SIGNALS_HISTORY_PERIOD)
             prices = history["Close"].tail(days)
 
             if prices.dropna().empty:
@@ -129,7 +147,7 @@ class MarketDataService:
 
     def get_market_signals(self, symbol: str) -> dict[str, Any]:
         quote = self.get_stock_quote(symbol)
-        prices = self.get_historical_prices(symbol, days=HISTORY_TRADING_DAYS)
+        prices = self.get_historical_prices(symbol, days=SIGNALS_FETCH_DAYS)
         current_price = float(quote["price"])
 
         rsi_14 = calculate_rsi(prices, period=14)
@@ -145,9 +163,20 @@ class MarketDataService:
         # *1.1 heuristic (realized vol plus a rough volatility-risk-premium
         # bump) is tier 3, and only applies if hv_20 itself isn't computable.
         current_iv = hv_20 if hv_20 > 0 else hv_20 * 1.1
-        base_vol = float(prices.pct_change().std() * (252 ** 0.5)) if len(prices) > 1 else 0.0
-        iv_low = base_vol * 0.9
-        iv_high = base_vol * 1.4
+
+        # The IV rank band: rank current_iv against a real rolling history of
+        # its own past values (see realized_vol_band's docstring) rather than
+        # a synthetic multiplier band. Falls back to the synthetic band only
+        # when there isn't enough price history for a trustworthy real one.
+        band = None
+        if len(prices) >= IV_RANK_WINDOW + IV_RANK_MIN_READINGS:
+            band = realized_vol_band(prices, window=IV_RANK_WINDOW, lookback_days=IV_RANK_LOOKBACK_DAYS)
+
+        if band is not None:
+            iv_low, iv_high = band
+        else:
+            base_vol = float(prices.pct_change().std() * (252**0.5)) if len(prices) > 1 else 0.0
+            iv_low, iv_high = base_vol * 0.9, base_vol * 1.4
 
         return {
             "rsi_14": rsi_14,
