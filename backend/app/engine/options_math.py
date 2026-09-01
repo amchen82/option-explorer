@@ -98,6 +98,31 @@ def iv_rank(current_iv: float, iv_52w_low: float, iv_52w_high: float) -> float:
     return round(float(min(100.0, max(0.0, rank))), 2)
 
 
+def realized_vol_band(prices: pd.Series, window: int = 20, lookback_days: int = 252) -> tuple[float, float] | None:
+    """The real min/max of a rolling N-day realized-volatility series over its
+    own trailing history.
+
+    Ranking today's volatility against this is a genuine empirical
+    percentile, unlike a synthetic band built from a single point-in-time
+    number. Free market data has no real historical *implied*-volatility
+    series to rank against, so this uses realized volatility as the whole
+    basis, both for "today" and for the distribution it's ranked against.
+
+    Returns None when there is not enough price history to compute even one
+    rolling reading, so callers can fall back to a cruder estimate.
+    """
+    if prices is None or len(prices) < window + 2:
+        return None
+
+    log_returns = np.log(prices / prices.shift(1)).dropna()
+    rolling = (log_returns.rolling(window).std() * math.sqrt(252.0)).dropna()
+    if rolling.empty:
+        return None
+
+    history = rolling.iloc[-lookback_days:]
+    return round(float(history.min()), 4), round(float(history.max()), 4)
+
+
 def historical_volatility(prices: pd.Series, window: int = 20) -> float:
     """Return annualized historical volatility from a price series."""
     if prices is None or len(prices) < 2:

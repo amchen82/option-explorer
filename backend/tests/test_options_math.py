@@ -8,6 +8,7 @@ from app.engine.options_math import (
     iv_rank,
     historical_volatility,
     prob_profit_from_delta,
+    realized_vol_band,
 )
 
 
@@ -64,6 +65,46 @@ def test_historical_volatility():
     prices = pd.Series(100 * np.exp(np.cumsum(np.random.normal(0, 0.01, 60))))
     hv = historical_volatility(prices, window=20)
     assert 0.0 < hv < 1.0
+
+
+def test_realized_vol_band_brackets_every_rolling_reading():
+    import numpy as np
+
+    np.random.seed(7)
+    prices = pd.Series(100 * np.exp(np.cumsum(np.random.normal(0, 0.01, 300))))
+
+    band = realized_vol_band(prices, window=20, lookback_days=252)
+
+    assert band is not None
+    low, high = band
+    log_returns = np.log(prices / prices.shift(1)).dropna()
+    rolling = (log_returns.rolling(20).std() * (252**0.5)).dropna().iloc[-252:]
+    assert low == pytest.approx(float(rolling.min()), abs=1e-4)
+    assert high == pytest.approx(float(rolling.max()), abs=1e-4)
+    assert 0.0 < low <= high
+
+
+def test_realized_vol_band_uses_only_the_trailing_lookback_window():
+    import numpy as np
+
+    np.random.seed(11)
+    prices = pd.Series(100 * np.exp(np.cumsum(np.random.normal(0, 0.01, 300))))
+
+    full = realized_vol_band(prices, window=20, lookback_days=252)
+    short = realized_vol_band(prices, window=20, lookback_days=30)
+
+    assert short != full
+
+
+def test_realized_vol_band_returns_none_without_enough_history_for_one_reading():
+    prices = pd.Series([100.0, 101.0, 99.0])
+
+    assert realized_vol_band(prices, window=20, lookback_days=252) is None
+
+
+def test_realized_vol_band_returns_none_for_empty_or_missing_prices():
+    assert realized_vol_band(pd.Series(dtype=float), window=20, lookback_days=252) is None
+    assert realized_vol_band(None, window=20, lookback_days=252) is None
 
 
 def test_prob_profit_from_delta():
