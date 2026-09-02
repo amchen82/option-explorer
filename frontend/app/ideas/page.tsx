@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import IdeaCard from "@/components/ideas/IdeaCard";
 import MarketViewHeader from "@/components/ideas/MarketViewHeader";
 import TickerSearch from "@/components/ideas/TickerSearch";
@@ -30,13 +31,19 @@ const EXPIRATION_LABELS: Record<ExpirationBucket, string> = {
 
 const EXPIRATION_BUCKETS = Object.keys(EXPIRATION_LABELS) as ExpirationBucket[];
 
-const DEFAULT_TICKERS = ["AAPL", "NVDA", "GOOG", "TSLA", "META", "SPY", "AMD"];
+// A widely-recognized ticker everyone can make sense of, so the first thing a
+// new visitor sees is real ideas rather than a blank loading spinner while
+// they figure out what to search for.
+const DEFAULT_TICKER = "SPY";
 
-function randomTicker() {
-  return DEFAULT_TICKERS[Math.floor(Math.random() * DEFAULT_TICKERS.length)];
+function isExpirationBucket(value: string | null): value is ExpirationBucket {
+  return value !== null && (EXPIRATION_BUCKETS as string[]).includes(value);
 }
 
-export default function IdeasPage() {
+function IdeasPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [data, setData] = useState<IdeasResponse | null>(null);
   const [symbol, setSymbol] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -44,33 +51,52 @@ export default function IdeasPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [expirationBucket, setExpirationBucket] = useState<ExpirationBucket>("1m");
 
-  const search = useCallback(async (nextSymbol: string, bucket: ExpirationBucket) => {
-    setLoading(true);
-    setError(null);
-    setSymbol(nextSymbol);
+  // Keeps the URL a shareable, bookmarkable snapshot of what's on screen
+  // (?symbol=AAPL&expiration=3m) without adding a history entry per search.
+  const syncUrl = useCallback(
+    (nextSymbol: string, bucket: ExpirationBucket) => {
+      const params = new URLSearchParams({ symbol: nextSymbol, expiration: bucket });
+      router.replace(`/ideas?${params.toString()}`, { scroll: false });
+    },
+    [router],
+  );
 
-    try {
-      const response: IdeasResponse = await api.ideas.get(nextSymbol, 0, bucket);
-      setData(response);
-      setFilter("all");
-    } catch (fetchError: unknown) {
-      setData(null);
-      const message = fetchError instanceof Error ? fetchError.message : "Something went wrong";
-      setError(
-        message.includes("400") || message.includes("404")
-          ? `We couldn't find "${nextSymbol}". Check the ticker and try again.`
-          : "Couldn't reach the market data service. Check your connection and try again.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const search = useCallback(
+    async (nextSymbol: string, bucket: ExpirationBucket) => {
+      setLoading(true);
+      setError(null);
+      setSymbol(nextSymbol);
+
+      try {
+        const response: IdeasResponse = await api.ideas.get(nextSymbol, 0, bucket);
+        setData(response);
+        setFilter("all");
+        syncUrl(nextSymbol, bucket);
+      } catch (fetchError: unknown) {
+        setData(null);
+        const message = fetchError instanceof Error ? fetchError.message : "Something went wrong";
+        setError(
+          message.includes("400") || message.includes("404")
+            ? `We couldn't find "${nextSymbol}". Check the ticker and try again.`
+            : "Couldn't reach the market data service. Check your connection and try again.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [syncUrl],
+  );
 
   useEffect(() => {
-    const selectedSymbol = randomTicker();
-    setSymbol(selectedSymbol);
-    void search(selectedSymbol, expirationBucket);
-    // Only run once, on mount, to pick the initial random ticker.
+    const urlSymbol = searchParams.get("symbol")?.trim().toUpperCase();
+    const urlExpirationRaw = searchParams.get("expiration");
+    const initialExpiration = isExpirationBucket(urlExpirationRaw) ? urlExpirationRaw : "1m";
+    const initialSymbol = urlSymbol || DEFAULT_TICKER;
+
+    setExpirationBucket(initialExpiration);
+    setSymbol(initialSymbol);
+    void search(initialSymbol, initialExpiration);
+    // Only run once, on mount, to load whatever the URL (or the default) says.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -214,5 +240,19 @@ export default function IdeasPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function IdeasPage() {
+  return (
+    <Suspense
+      fallback={
+        <p className="rounded-xl border border-[var(--tv-border)] bg-[var(--tv-surface)] px-4 py-10 text-center text-sm text-[var(--text-secondary)]">
+          Loading option ideas…
+        </p>
+      }
+    >
+      <IdeasPageInner />
+    </Suspense>
   );
 }
