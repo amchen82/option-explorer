@@ -1,6 +1,6 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-async function apiFetch(path: string, options: RequestInit = {}, token?: string) {
+async function apiFetch(path: string, options: RequestInit = {}, token?: string, signal?: AbortSignal) {
   const headers = new Headers(options.headers);
 
   if (token) {
@@ -14,6 +14,7 @@ async function apiFetch(path: string, options: RequestInit = {}, token?: string)
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers,
+    signal,
   });
 
   if (!res.ok) {
@@ -60,5 +61,7 @@ export const api = {
 
       return apiFetch(`/ideas/${encodeURIComponent(symbol)}?${params.toString()}`);
     },
+    quotePreview: (symbol: string, signal?: AbortSignal) =>
+      apiFetch(`/ideas/${encodeURIComponent(symbol)}/quote`, {}, undefined, signal),
   },
 };

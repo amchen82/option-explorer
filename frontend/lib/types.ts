@@ -145,9 +145,19 @@ export interface VolatilityView {
   headline: string;
   detail: string;
   comparison: string;
+  // "live": current_iv came from a real quote on the current option chain.
+  // "estimated": no usable live quote, so it's a fallback from realized
+  // price history instead. iv_rank is derived from current_iv either way.
+  current_iv_source: "live" | "estimated";
 }
 
 export type ExpirationBucket = "0d" | "1w" | "2w" | "1m" | "3m" | "6m" | "12m" | "gt12m";
+
+export interface QuotePreview {
+  symbol: string;
+  price: number;
+  stale: boolean;
+}
 
 export interface IdeasResponse {
   symbol: string;
