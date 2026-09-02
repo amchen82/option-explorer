@@ -221,6 +221,15 @@ class TestConvictionScoring:
         assert min(bullish) > min(bearish)
         assert max(bullish) > max(bearish)
 
+    def test_directional_reasoning_cites_the_actual_trend_driver(self, sample_chain, bullish_signals):
+        # bullish_signals has above_50dma=True, above_200dma=True, which market_bias's
+        # own trend component describes with this exact sentence -- a bullish idea's
+        # own "why" should cite it directly, not just say "the trend agrees" generically.
+        ideas = run(sample_chain, bullish_signals)
+        bullish_idea = next(idea for idea in ideas if idea["bias"] == "bullish")
+
+        assert any("textbook definition of an uptrend" in reason for reason in bullish_idea["why"])
+
     def test_high_iv_favors_selling_premium_over_buying_it(self, sample_chain, bullish_signals):
         high_iv = run(sample_chain, {**bullish_signals, "iv_rank": 90.0})
         seller = next(idea for idea in high_iv if idea["strategy"] == "cash_secured_put")
