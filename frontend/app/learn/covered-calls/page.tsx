@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import ReferenceArticle from "@/components/learn/ReferenceArticle";
 
 const title = "Covered Calls Explained — Turn Stock You Own Into Income";
 const description =
   "How a covered call works, its real max profit and max loss, breakeven, and when it fits — with a worked example and honest risks.";
+const leadAnswer =
+  "A covered call combines ownership of 100 shares with the sale of one call option against them. The premium " +
+  "collected produces income but caps the position's upside above the strike price. Maximum loss remains " +
+  "substantial, not eliminated, because the underlying shares can still fall toward zero regardless of the premium received.";
 
 export const metadata: Metadata = {
   title,
@@ -12,48 +16,44 @@ export const metadata: Metadata = {
   openGraph: { title, description, url: "/learn/covered-calls", type: "article" },
 };
 
-const articleJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Article",
-  headline: title,
-  description,
-  url: "https://www.option-ideas.com/learn/covered-calls",
-};
-
-const breadcrumbJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  itemListElement: [
-    { "@type": "ListItem", position: 1, name: "Home", item: "https://www.option-ideas.com/" },
-    { "@type": "ListItem", position: 2, name: "Learn", item: "https://www.option-ideas.com/learn" },
-    { "@type": "ListItem", position: 3, name: "Covered calls", item: "https://www.option-ideas.com/learn/covered-calls" },
-  ],
-};
-
 export default function CoveredCallsPage() {
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 py-2">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd).replace(/</g, "\\u003c") }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd).replace(/</g, "\\u003c") }}
-      />
-
-      <header className="tv-panel rounded-xl">
-        <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">Strategy guide</p>
-        <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">
-          Covered calls: turn shares you own into income
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-          A covered call is selling someone else the right to buy 100 shares you already own, at a price you pick, by
-          a date you pick — in exchange for cash today. It&apos;s one of the first strategies most options traders
-          learn, because the risk is just the risk of owning the stock, with a little cushion.
-        </p>
-      </header>
-
+    <ReferenceArticle
+      eyebrow="Strategy guide"
+      h1="Covered calls: turn shares you own into income"
+      leadAnswer={leadAnswer}
+      canonicalPath="/learn/covered-calls"
+      title={title}
+      description={description}
+      published="2026-09-01"
+      updated="2026-09-02"
+      breadcrumbLabel="Covered calls"
+      risks={[
+        "You give up everything above the strike -- a sharp rally caps your gain at exactly the same profit as a much smaller move to the strike.",
+        "Maximum loss is substantial, not eliminated: the premium cushions a decline but does not protect against the shares falling most of the way to zero.",
+        "Assignment can happen before expiration, especially close to a dividend date, leaving you without the shares (and without the ability to sell another call) sooner than planned.",
+      ]}
+      references={["The Options Clearing Corporation (OCC)", "Cboe Options Institute"]}
+      faq={[
+        {
+          question: "Do I need to already own the shares?",
+          answer: "Yes. A covered call specifically means selling a call against stock you already hold -- selling a call without owning the shares is a naked call, a very different, undefined-risk position.",
+        },
+        {
+          question: "What happens on assignment?",
+          answer: "Your shares are sold at the strike price, and you keep the premium already collected. You no longer own the stock, and you're free to buy it back or move on.",
+        },
+        {
+          question: "Can I roll the call instead of letting it get assigned?",
+          answer: "Yes -- closing the current call and selling a new one, usually at a later expiration or different strike, is common practice for continuing to collect premium without the shares being called away.",
+        },
+      ]}
+      related={[
+        { href: "/learn/cash-secured-puts", label: "Cash-secured puts" },
+        { href: "/learn/covered-call-vs-cash-secured-put", label: "Covered call vs. cash-secured put" },
+        { href: "/learn/protective-collars", label: "Protective collars" },
+      ]}
+    >
       <section className="tv-panel rounded-xl">
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">The mechanics</h2>
         <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
@@ -112,9 +112,9 @@ export default function CoveredCallsPage() {
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">A worked example</h2>
         <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
           Illustrative numbers, not live quotes — for that, see the{" "}
-          <Link href="/ideas" className="text-[var(--text-accent)] underline underline-offset-2">
+          <a href="/ideas" className="text-[var(--text-accent)] underline underline-offset-2">
             ideas
-          </Link>{" "}
+          </a>{" "}
           page, which prices covered calls from a real, current option chain.
         </p>
         <div className="mt-3 overflow-x-auto">
@@ -169,26 +169,6 @@ export default function CoveredCallsPage() {
           </div>
         </div>
       </section>
-
-      <aside className="rounded-xl border border-[rgba(211,139,44,0.35)] bg-[rgba(211,139,44,0.12)] px-5 py-4 text-sm leading-6 text-[#f1c27a]">
-        For educational purposes only. Options trading involves significant risk of loss. Consult a qualified
-        financial advisor before trading.
-      </aside>
-
-      <div className="flex flex-wrap gap-3">
-        <Link
-          href="/ideas"
-          className="inline-flex rounded-lg border border-[var(--text-accent)] bg-[rgba(76,141,255,0.18)] px-5 py-3 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[rgba(76,141,255,0.28)]"
-        >
-          See real covered call ideas
-        </Link>
-        <Link
-          href="/learn/cash-secured-puts"
-          className="tv-chip inline-flex rounded-lg px-5 py-3 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--tv-surface-3)]"
-        >
-          Next: cash-secured puts
-        </Link>
-      </div>
-    </div>
+    </ReferenceArticle>
   );
 }
