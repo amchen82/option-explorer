@@ -20,12 +20,26 @@ const articleJsonLd = {
   url: "https://www.option-ideas.com/learn/protective-collars",
 };
 
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: "https://www.option-ideas.com/" },
+    { "@type": "ListItem", position: 2, name: "Learn", item: "https://www.option-ideas.com/learn" },
+    { "@type": "ListItem", position: 3, name: "Protective collars", item: "https://www.option-ideas.com/learn/protective-collars" },
+  ],
+};
+
 export default function ProtectiveCollarsPage() {
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 py-2">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd).replace(/</g, "\\u003c") }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd).replace(/</g, "\\u003c") }}
       />
 
       <header className="tv-panel rounded-xl">
