@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.option-ideas.com"),
   title,
   description,
+  alternates: { canonical: "/" },
   openGraph: {
     title,
     description,
