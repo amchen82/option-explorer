@@ -120,9 +120,22 @@ const proficiency = [
   },
 ];
 
+const tutorialJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: pageTitle,
+  description: pageDescription,
+  url: "https://www.option-ideas.com/tutorial",
+};
+
 export default function TutorialPage() {
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 py-2">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(tutorialJsonLd).replace(/</g, "\\u003c") }}
+      />
+
       <header className="tv-panel rounded-xl">
         <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">Options fundamentals</p>
         <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">

@@ -42,9 +42,72 @@ const steps = [
   },
 ];
 
+const SITE_URL = "https://www.option-ideas.com";
+const SITE_NAME = "Option Ideas";
+const SITE_DESCRIPTION =
+  "Option Ideas turns a ticker's market data and option chain into comparable options strategy examples, each " +
+  "with plain-language reasoning behind it. No broker connection, no sign-in, no jargon left unexplained.";
+// The image already used as the site's Open Graph/Twitter card in the root
+// layout -- reused here rather than inventing a separate logo asset.
+const SITE_IMAGE = `${SITE_URL}/screenshots/ideas.png`;
+
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: SITE_NAME,
+  url: SITE_URL,
+  description: SITE_DESCRIPTION,
+  image: SITE_IMAGE,
+};
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: SITE_NAME,
+  url: SITE_URL,
+  // Genuinely functional: /ideas reads ?symbol= from the URL and loads that
+  // ticker's ideas directly (see app/ideas/page.tsx's URL-state handling).
+  potentialAction: {
+    "@type": "SearchAction",
+    target: `${SITE_URL}/ideas?symbol={search_term_string}`,
+    "query-input": "required name=search_term_string",
+  },
+};
+
+const softwareApplicationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: SITE_NAME,
+  url: SITE_URL,
+  description: SITE_DESCRIPTION,
+  applicationCategory: "FinanceApplication",
+  operatingSystem: "Any (web browser)",
+  // The one verifiable, already-stated fact about pricing -- the homepage's
+  // own copy says "Free, no sign-in required." Not a real Offer/checkout,
+  // just the accurate price: nothing.
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+  },
+};
+
 export default function LandingPage() {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8 py-2">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd).replace(/</g, "\\u003c") }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd).replace(/</g, "\\u003c") }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd).replace(/</g, "\\u003c") }}
+      />
+
       <header className="tv-panel rounded-xl text-center sm:text-left">
         <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">Option Ideas</p>
         <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">

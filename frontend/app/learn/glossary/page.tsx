@@ -11,13 +11,6 @@ export const metadata: Metadata = {
   openGraph: { title, description, url: "/learn/glossary", type: "website" },
 };
 
-const glossaryJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "DefinedTermSet",
-  name: "Options Trading Glossary",
-  description,
-};
-
 type Term = { term: string; definition: string };
 
 const basics: Term[] = [
@@ -52,6 +45,19 @@ const cardTerms: Term[] = [
   { term: "Conviction score", definition: "A weighted score (not a guarantee) combining whether the trend agrees with the idea's direction, whether IV rank favors this structure, how liquid the contracts are, and whether earnings fall inside the trade's life." },
   { term: "Open interest", definition: "How many contracts at that strike are currently open (not yet closed or expired) — a rough proxy for how easy the contract is to trade." },
 ];
+
+const glossaryJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "DefinedTermSet",
+  name: "Options Trading Glossary",
+  description,
+  hasDefinedTerm: [...basics, ...greeks, ...volatility, ...cardTerms].map((item) => ({
+    "@type": "DefinedTerm",
+    name: item.term,
+    description: item.definition,
+    inDefinedTermSet: "https://www.option-ideas.com/learn/glossary",
+  })),
+};
 
 function TermTable({ terms }: { terms: Term[] }) {
   return (
