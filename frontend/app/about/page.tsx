@@ -11,9 +11,25 @@ export const metadata: Metadata = {
   openGraph: { title, description, url: "/about", type: "website" },
 };
 
+// Only verifiable facts: no founder/team Person entities, since none are
+// publicly named anywhere on the site -- inventing "real authors" for
+// schema would be exactly the kind of fabrication this is meant to avoid.
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Option Ideas",
+  url: "https://www.option-ideas.com",
+  description,
+};
+
 export default function AboutPage() {
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 py-2">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd).replace(/</g, "\\u003c") }}
+      />
+
       <header className="tv-panel rounded-xl">
         <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">About us</p>
         <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">Clearer options research</h1>
