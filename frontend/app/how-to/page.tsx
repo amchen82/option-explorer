@@ -1,5 +1,16 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+
+const pageTitle = "How to Use Option Ideas — A Quick Walkthrough";
+const pageDescription = "A 4-step walkthrough of Option Ideas: pick a ticker, read the market snapshot, compare trade cards, and open a card's full detail.";
+
+export const metadata: Metadata = {
+  title: pageTitle,
+  description: pageDescription,
+  alternates: { canonical: "/how-to" },
+  openGraph: { title: pageTitle, description: pageDescription, url: "/how-to", type: "website" },
+};
 
 const steps = [
   {

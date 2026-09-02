@@ -1,4 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+const title = "Options Trading FAQ — Common Questions Answered";
+const description = "Answers to common questions about options basics (contracts, moneyness, time decay) and how Option Ideas works.";
+
+export const metadata: Metadata = {
+  title,
+  description,
+  alternates: { canonical: "/faq" },
+  openGraph: { title, description, url: "/faq", type: "website" },
+};
 
 const faqs = [
   {

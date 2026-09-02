@@ -1,4 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+const pageTitle = "Options Trading Tutorial for Beginners";
+const pageDescription = "A beginner's blueprint for options: core vocabulary, moneyness, time decay, and the four foundational strategies, with a comparison matrix.";
+
+export const metadata: Metadata = {
+  title: pageTitle,
+  description: pageDescription,
+  alternates: { canonical: "/tutorial" },
+  openGraph: { title: pageTitle, description: pageDescription, url: "/tutorial", type: "website" },
+};
 
 const vocabulary = [
   {
