@@ -1,0 +1,19 @@
+# Option Ideas
+
+> Option Ideas turns any stock ticker's real market data and live option chain into ranked, comparable options-strategy trade ideas. Every idea is explained in plain language with its max profit, max loss, breakeven, probability of profit, and Greeks. Educational only — not financial advice, not a recommendation to trade, no broker connection, and no sign-in required to use the core tool.
+
+## Product
+
+- [Option ideas](https://www.option-ideas.com/ideas): Ranked option strategy ideas for any ticker, generated from real market data and live option chains, each with its own plain-language reasoning.
+- [How it works](https://www.option-ideas.com/how-to): How the strategies, conviction scoring, and math behind each idea are computed.
+- [Tutorial](https://www.option-ideas.com/tutorial): A walkthrough of options trading concepts for people new to options.
+- [Strategy guides](https://www.option-ideas.com/learn): In-depth guides to individual strategies (covered calls, cash-secured puts, protective collars), each with real numbers and a worked example.
+- [Glossary](https://www.option-ideas.com/learn/glossary): Plain-language definitions for every options term used on the site.
+- [FAQ](https://www.option-ideas.com/faq): Answers to common questions about the tool and about options trading terms.
+- [About](https://www.option-ideas.com/about): What Option Ideas is, who it's for, and what it is not.
+
+## Notes
+
+- All ideas are illustrative, generated from public market data — not a recommendation to trade and not financial advice.
+- Strikes are chosen by matching each strategy's target delta against the real option chain; ideas are only shown when a real, liquid enough contract fits.
+- No account, broker connection, or personal financial data is required to use the core ideas tool.
