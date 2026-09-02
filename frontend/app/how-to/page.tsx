@@ -5,7 +5,7 @@ const steps = [
   {
     number: "01",
     title: "Start with an idea",
-    description: "Open Option Ideas. The page selects a liquid, widely traded ticker at random, or enter a ticker you want to explore.",
+    description: "Open Option Ideas. The page loads SPY by default so you're never staring at a blank spinner, or enter a ticker you want to explore.",
     image: "/screenshots/howto-1-start.png",
     alt: "Ticker search box on the Option Ideas page",
   },
@@ -32,9 +32,32 @@ const steps = [
   },
 ];
 
+const howToJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  name: "How to use Option Ideas",
+  description:
+    "Option Ideas turns a ticker's market data and option chain into comparable options strategy examples, " +
+    "each with plain-language reasoning.",
+  step: steps.map((step, index) => ({
+    "@type": "HowToStep",
+    position: index + 1,
+    name: step.title,
+    text: step.description,
+    image: `https://www.option-ideas.com${step.image}`,
+  })),
+};
+
 export default function HowToPage() {
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 py-2">
+      <script
+        type="application/ld+json"
+        // JSON we generate ourselves from the static steps array above, not user input;
+        // still escape "<" so a literal "</script>" in a description can't break out of the tag.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(howToJsonLd).replace(/</g, "\\u003c") }}
+      />
+
       <header className="tv-panel rounded-xl">
         <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">Getting started</p>
         <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">How to use Option Ideas</h1>
