@@ -21,3 +21,13 @@ class IdeasResponse(BaseModel):
     volatility: dict[str, Any]
     ideas: list[dict[str, Any]]
     disclaimer: str
+
+
+class QuotePreview(BaseModel):
+    """A minimal price preview for the ticker search box — no option chain, no ideas."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    symbol: str
+    price: float
+    stale: bool

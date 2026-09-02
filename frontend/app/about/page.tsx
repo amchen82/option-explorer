@@ -1,4 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+const title = "About Option Ideas";
+const description = "Option Ideas helps people explore options strategies with understandable market context, payoff estimates, and plain-language risk explanations.";
+
+export const metadata: Metadata = {
+  title,
+  description,
+  alternates: { canonical: "/about" },
+  openGraph: { title, description, url: "/about", type: "website" },
+};
 
 export default function AboutPage() {
   return (

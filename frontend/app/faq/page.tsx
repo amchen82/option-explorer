@@ -1,4 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+const title = "Options Trading FAQ — Common Questions Answered";
+const description = "Answers to common questions about options basics (contracts, moneyness, time decay) and how Option Ideas works.";
+
+export const metadata: Metadata = {
+  title,
+  description,
+  alternates: { canonical: "/faq" },
+  openGraph: { title, description, url: "/faq", type: "website" },
+};
 
 const faqs = [
   {
@@ -53,9 +64,29 @@ const faqs = [
   },
 ];
 
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((faq) => ({
+    "@type": "Question",
+    name: faq.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: faq.answer,
+    },
+  })),
+};
+
 export default function FaqPage() {
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 py-2">
+      <script
+        type="application/ld+json"
+        // JSON we generate ourselves from the static faqs array above, not user input;
+        // still escape "<" so a literal "</script>" in an answer can't break out of the tag.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd).replace(/</g, "\\u003c") }}
+      />
+
       <header className="tv-panel rounded-xl">
         <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">FAQ</p>
         <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">Frequently asked questions</h1>

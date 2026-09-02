@@ -231,6 +231,36 @@ class TestVolatilityRefinement:
         assert volatility["current_iv"] == pytest.approx(0.285)
 
 
+class TestCurrentIvSource:
+    """A field-level confidence flag: is current_iv a real market quote or a fallback estimate?"""
+
+    def test_live_atm_iv_is_flagged_live(self):
+        volatility = fetch(chain=build_chain(data_quality="live")).json()["volatility"]
+
+        assert volatility["current_iv_source"] == "live"
+
+    def test_modeled_chain_is_flagged_estimated(self):
+        volatility = fetch(chain=build_chain(data_quality="modeled")).json()["volatility"]
+
+        assert volatility["current_iv_source"] == "estimated"
+
+    def test_a_live_chain_with_no_usable_iv_is_flagged_estimated(self):
+        contracts = build_chain(data_quality="live")
+        blinded = [option_chain.Contract(**{**c.__dict__, "implied_volatility": 0.0}) for c in contracts.calls]
+        blind_chain = option_chain.ChainResult(
+            symbol=contracts.symbol,
+            expiration=contracts.expiration,
+            dte=contracts.dte,
+            calls=blinded,
+            puts=[],
+            data_quality="live",
+        )
+
+        volatility = fetch(chain=blind_chain).json()["volatility"]
+
+        assert volatility["current_iv_source"] == "estimated"
+
+
 class TestErrorHandling:
     @pytest.mark.parametrize("symbol", ["1AAPL", "toolongsymbol", "AA PL"])
     def test_malformed_symbols_are_rejected(self, symbol):
@@ -265,3 +295,52 @@ class TestExistingRoutesUnaffected:
 
         assert "/strategies/public/{symbol}" in routes
         assert "/ideas/{symbol}" in routes
+
+
+class TestQuotePreview:
+    """A lightweight endpoint for the ticker search box -- no option chain, no ideas."""
+
+    def fetch(self, path: str = "/ideas/AAPL/quote", *, quote_overrides=None):
+        with patch("app.routers.ideas.market_data_svc", fake_market_data(quote_overrides)) as service:
+            response = client.get(path)
+            return response, service
+
+    def test_returns_symbol_price_and_staleness(self):
+        response, _ = self.fetch()
+
+        assert response.status_code == 200
+        assert response.json() == {"symbol": "AAPL", "price": SPOT, "stale": False}
+
+    def test_does_not_touch_the_option_chain(self):
+        with patch("app.routers.ideas.market_data_svc", fake_market_data()), patch(
+            "app.routers.ideas.get_option_chain"
+        ) as chain_mock:
+            response = client.get("/ideas/AAPL/quote")
+
+        assert response.status_code == 200
+        chain_mock.assert_not_called()
+
+    def test_does_not_compute_market_signals(self):
+        _, service = self.fetch()
+
+        service.get_market_signals.assert_not_called()
+
+    def test_symbol_is_normalized_to_uppercase(self):
+        response, _ = self.fetch("/ideas/aapl/quote")
+
+        assert response.json()["symbol"] == "AAPL"
+
+    def test_malformed_symbol_is_rejected(self):
+        response, _ = self.fetch("/ideas/1AAPL/quote")
+
+        assert response.status_code == 400
+
+    def test_missing_price_returns_not_found(self):
+        response, _ = self.fetch(quote_overrides={"price": 0.0})
+
+        assert response.status_code == 404
+
+    def test_stale_quote_is_reported(self):
+        response, _ = self.fetch(quote_overrides={"stale": True})
+
+        assert response.json()["stale"] is True

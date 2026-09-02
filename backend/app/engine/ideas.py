@@ -351,7 +351,7 @@ def _build_templates(chain: ChainResult, spot: float, fallback_iv: float, symbol
 # ──────────────────────────────────────────────────────────────────────
 
 
-def _score_directional(bias: str, market_score: float) -> tuple[float, str | None]:
+def _score_directional(bias: str, market_score: float, trend_driver: str | None = None) -> tuple[float, str | None]:
     if bias == "bullish":
         component = market_score
     elif bias == "bearish":
@@ -366,7 +366,11 @@ def _score_directional(bias: str, market_score: float) -> tuple[float, str | Non
     if bias == "neutral":
         text = "No strong directional signal right now, which is exactly when a neutral, premium-collecting position fits best."
     elif component > 0:
-        text = f"The trend and momentum readings point the same way as this {bias} position."
+        # Cite the actual driver text shown at the top of the page, so this idea's
+        # "why" isn't a generic restatement of something the user already read.
+        text = f"{trend_driver} That backs this {bias} position." if trend_driver else (
+            f"The trend and momentum readings point the same way as this {bias} position."
+        )
     else:
         text = f"The current trend actually leans against this {bias} position — treat it as a contrarian bet."
 
@@ -434,8 +438,9 @@ def _conviction(
     dte: int,
     data_quality: str,
     is_credit: bool,
+    trend_driver: str | None = None,
 ) -> tuple[float, str, list[str]]:
-    directional, directional_text = _score_directional(template["bias"], market_score)
+    directional, directional_text = _score_directional(template["bias"], market_score, trend_driver)
     volatility, volatility_text = _score_volatility(is_credit, iv_rank)
     liquidity_score, liquidity_text = _score_liquidity(liquidity, data_quality)
     earnings, earnings_text = _score_earnings(earnings_days, dte)
@@ -481,6 +486,9 @@ def generate_ideas(
     market_score = float(market_view.get("score", 0.0))
     earnings_days = signals.get("earnings_days_away")
     dte = chain.dte
+    # drivers[0] is always the trend sentence -- see market_bias()'s own ordering.
+    drivers = market_view.get("drivers") or []
+    trend_driver = drivers[0] if drivers else None
 
     ideas: list[dict] = []
 
@@ -500,6 +508,7 @@ def generate_ideas(
             dte=dte,
             data_quality=chain.data_quality,
             is_credit=is_credit,
+            trend_driver=trend_driver,
         )
 
         strikes = "-".join(f"{leg.contract.strike:g}" for leg in legs)
