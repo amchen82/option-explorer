@@ -11,7 +11,7 @@ from app.engine.ideas import generate_ideas
 from app.engine.narrative import explain_volatility, market_bias
 from app.engine.options_math import iv_rank
 from app.engine.technicals import earnings_days_away
-from app.schemas.ideas import IdeasResponse
+from app.schemas.ideas import IdeasResponse, QuotePreview
 from app.services.market_data import MarketDataService
 from app.services.option_chain import atm_implied_volatility, get_option_chain
 
@@ -121,7 +121,11 @@ def get_ideas(
     # Tier 1 of the current_iv fallback chain: a live chain's own ATM implied
     # volatility beats the pre-chain, history-only estimate market_data
     # computed above. Refine before generating the narrative and the ideas
-    # themselves, so both benefit from the more accurate reading.
+    # themselves, so both benefit from the more accurate reading. Tracked
+    # explicitly as current_iv_source so the UI can badge which one a user
+    # is actually looking at, rather than silently presenting an estimate
+    # with the same confidence as a real market quote.
+    current_iv_source = "estimated"
     if chain.data_quality == "live":
         atm_iv = atm_implied_volatility(chain, spot, reference_vol=float(signals.get("hv_20", 0.0)))
         if atm_iv is not None and atm_iv > 0:
@@ -134,12 +138,14 @@ def get_ideas(
             )
             combined["current_iv"] = atm_iv
             combined["iv_rank"] = iv_rank(atm_iv, float(signals.get("iv_low", 0.0)), float(signals.get("iv_high", 0.0)))
+            current_iv_source = "live"
         else:
             logger.debug("[%s] live chain has no usable ATM IV — keeping pre-chain current_iv", normalized)
     else:
         logger.debug("[%s] chain is modeled — keeping pre-chain current_iv", normalized)
 
     volatility = explain_volatility(combined)
+    volatility["current_iv_source"] = current_iv_source
     logger.info(
         "[%s] final volatility: current_iv=%s iv_rank=%s regime=%s",
         normalized,
@@ -178,4 +184,28 @@ def get_ideas(
         "volatility": volatility,
         "ideas": ideas,
         "disclaimer": DISCLAIMER,
+    }
+
+
+@router.get("/{symbol}/quote", response_model=QuotePreview)
+def get_quote_preview(symbol: str):
+    """A minimal price preview for the ticker search box.
+
+    Deliberately skips the option chain and market signals that GET /ideas/{symbol}
+    computes — this is meant to be cheap enough to call on every keystroke.
+    """
+    normalized = symbol.strip().upper()
+
+    if not _SYMBOL_PATTERN.match(normalized):
+        raise HTTPException(status_code=400, detail=f"'{symbol}' is not a valid ticker symbol.")
+
+    quote = market_data_svc.get_stock_quote(normalized)
+    price = float(quote.get("price") or 0.0)
+    if price <= 0:
+        raise HTTPException(status_code=404, detail=f"No market data available for '{normalized}'.")
+
+    return {
+        "symbol": normalized,
+        "price": round(price, 2),
+        "stale": bool(quote.get("stale", False)),
     }
