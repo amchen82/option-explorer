@@ -66,6 +66,13 @@ export default function IdeaCard({ idea, spot }: { idea: Idea; spot: number }) {
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-base font-semibold text-[var(--text-primary)]">{idea.name}</h3>
           <BiasPill bias={idea.bias} />
+          {idea.data_quality === "modeled" && (
+            <Tooltip text="Live option quotes weren't available for this leg, so its strike and premium are a calculated estimate rather than a real market price.">
+              <span className="rounded-md border border-[rgba(211,139,44,0.4)] bg-[rgba(211,139,44,0.12)] px-1.5 py-0.5 text-[10px] uppercase tracking-[0.1em] text-[#f1c27a]">
+                Modeled
+              </span>
+            </Tooltip>
+          )}
         </div>
 
         <p className="mt-1.5 text-sm text-[var(--text-secondary)]">{idea.summary}</p>

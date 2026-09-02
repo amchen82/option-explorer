@@ -1,4 +1,5 @@
 import type { VolatilityView } from "@/lib/types";
+import Tooltip from "../Tooltip";
 
 const REGIME_COLOR: Record<VolatilityView["regime"], string> = {
   high: "var(--text-warning)",
@@ -12,6 +13,11 @@ const IMPLICATION_LABEL: Record<VolatilityView["implication"], string> = {
   favors_buying: "Favors buying options",
   neutral: "No edge either way",
 };
+
+const IV_SOURCE_EXPLANATION =
+  "Live: read from a real bid/ask quote on the current option chain. Estimated: no usable live quote right now " +
+  "(markets closed, or the chain is too thin) — falls back to a value derived from the stock's own recent " +
+  "realized volatility instead.";
 
 export default function VolatilityCard({ volatility }: { volatility: VolatilityView }) {
   const color = REGIME_COLOR[volatility.regime];
@@ -45,8 +51,19 @@ export default function VolatilityCard({ volatility }: { volatility: VolatilityV
 
       <dl className="metric mt-4 grid grid-cols-3 gap-2 border-t border-[var(--tv-border)] pt-3 text-center">
         <div>
-          <dt className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">Implied</dt>
-          <dd className="text-sm text-[var(--text-primary)]">{(volatility.current_iv * 100).toFixed(1)}%</dd>
+          <dt className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+            <Tooltip text={IV_SOURCE_EXPLANATION}>Implied</Tooltip>
+          </dt>
+          <dd className="text-sm text-[var(--text-primary)]">
+            {(volatility.current_iv * 100).toFixed(1)}%
+            <span
+              className={`ml-1 text-[9px] font-normal uppercase tracking-[0.08em] ${
+                volatility.current_iv_source === "live" ? "text-[var(--text-positive)]" : "text-[var(--text-tertiary)]"
+              }`}
+            >
+              {volatility.current_iv_source === "live" ? "live" : "est."}
+            </span>
+          </dd>
         </div>
         <div>
           <dt className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">Actual (20d)</dt>
