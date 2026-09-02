@@ -118,10 +118,13 @@ function IdeasPageInner() {
         <div>
           <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">Option ideas</p>
           <h1 className="mt-1 text-2xl font-semibold text-[var(--text-primary)] lg:text-3xl">
-            Pick a ticker to explore option ideas
+            Options strategy finder and trade idea analyzer
           </h1>
-          <p className="mt-1.5 text-sm text-[var(--text-secondary)]">
-            Every idea explains its own reasoning, in plain English.
+          <p className="mt-1.5 max-w-2xl text-sm text-[var(--text-secondary)]">
+            Enter any stock or ETF ticker to compare options strategies built from live market data and the current
+            option chain. Every idea shows its max profit, max loss, breakeven, probability of profit, and Greeks —
+            explained in plain English, not just numbers. No sign-in, no broker connection, not a recommendation to
+            trade.
           </p>
         </div>
 
