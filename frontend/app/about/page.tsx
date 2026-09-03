@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 const title = "About Option Ideas";
-const description = "Option Ideas helps people explore options strategies with understandable market context, payoff estimates, and plain-language risk explanations.";
+const description =
+  "Option Ideas exists to educate: understand real options trade ideas built from real market data, across a wide range of strategies for any ticker.";
 
 export const metadata: Metadata = {
   title,
@@ -32,21 +33,28 @@ export default function AboutPage() {
 
       <header className="tv-panel rounded-xl">
         <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">About us</p>
-        <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">Clearer options research</h1>
+        <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">
+          Our goal is to help you understand the trade, not just see the numbers
+        </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-          Option Ideas helps people explore common options strategies with understandable market context, payoff
-          estimates, and plain-language risk explanations.
+          Option Ideas exists to educate. Every idea is generated from real market data and a real, current option
+          chain for the ticker you choose — never a hypothetical placeholder — so you can explore a wide range of
+          genuine strategies and actually understand why each one works before you ever consider trading it.
         </p>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-3">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <article className="tv-panel rounded-xl">
           <h2 className="text-base font-semibold text-[var(--text-primary)]">Educational first</h2>
-          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">We explain terminology, trade structure, and risk alongside the numbers.</p>
+          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">We explain terminology, trade structure, and risk alongside the numbers, so you understand the trade, not just its payoff.</p>
         </article>
         <article className="tv-panel rounded-xl">
-          <h2 className="text-base font-semibold text-[var(--text-primary)]">Data-aware</h2>
-          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">Live option data is labeled clearly, and estimates are visibly marked when quotes are unavailable.</p>
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">Real data, real market</h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">Every idea is priced from a live option chain, not a hypothetical — and estimates are labeled clearly whenever live quotes aren&apos;t available.</p>
+        </article>
+        <article className="tv-panel rounded-xl">
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">Many ideas to explore</h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">Up to eight strategies at once for any ticker, ranked and explained, so you can compare instead of guessing at just one.</p>
         </article>
         <article className="tv-panel rounded-xl">
           <h2 className="text-base font-semibold text-[var(--text-primary)]">No trade execution</h2>
