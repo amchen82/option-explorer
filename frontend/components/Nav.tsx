@@ -50,7 +50,7 @@ export default function Nav() {
     <nav className="sticky top-0 z-10 bg-[var(--tv-surface)]">
       <div className="mx-auto flex h-10 w-full max-w-[1360px] items-center justify-between px-4 xl:px-5">
         <div className="flex items-center gap-5">
-          <Link href="/ideas" className="flex items-center gap-2 text-[13px] font-bold tracking-[0.2em] text-[var(--text-primary)]">
+          <Link href="/" className="flex items-center gap-2 text-[13px] font-bold tracking-[0.2em] text-[var(--text-primary)]">
             <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
               <rect x="1" y="1" width="16" height="16" rx="2.5" stroke="var(--text-accent)" strokeWidth="1.25" />
               <polyline points="3.5,13 6.5,8.5 9.5,11 12,7.5 14.5,5" stroke="var(--text-accent)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -58,6 +58,12 @@ export default function Nav() {
             OPTION IDEAS
           </Link>
           <div className="hidden items-center gap-4 sm:flex">
+            <Link
+              href="/ideas"
+              className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+            >
+              Home
+            </Link>
             <Link
               href="/tutorial"
               className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
