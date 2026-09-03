@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import ReferenceArticle from "@/components/learn/ReferenceArticle";
 
 const title = "Protective Collars Explained — Fence In Gains Without Paying Full Price";
 const description =
   "How a protective collar works, its real max profit and max loss, breakeven, and when it fits — with a worked example and honest risks.";
+const leadAnswer =
+  "A protective collar combines ownership of 100 shares with a sold call above the price and a bought put below " +
+  "it, usually financed by the call's premium. Both maximum profit and maximum loss are fixed the moment the " +
+  "trade opens. It fences in an existing gain, trading away further upside for defined downside protection.";
 
 export const metadata: Metadata = {
   title,
@@ -12,48 +16,44 @@ export const metadata: Metadata = {
   openGraph: { title, description, url: "/learn/protective-collars", type: "article" },
 };
 
-const articleJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Article",
-  headline: title,
-  description,
-  url: "https://www.option-ideas.com/learn/protective-collars",
-};
-
-const breadcrumbJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  itemListElement: [
-    { "@type": "ListItem", position: 1, name: "Home", item: "https://www.option-ideas.com/" },
-    { "@type": "ListItem", position: 2, name: "Learn", item: "https://www.option-ideas.com/learn" },
-    { "@type": "ListItem", position: 3, name: "Protective collars", item: "https://www.option-ideas.com/learn/protective-collars" },
-  ],
-};
-
 export default function ProtectiveCollarsPage() {
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 py-2">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd).replace(/</g, "\\u003c") }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd).replace(/</g, "\\u003c") }}
-      />
-
-      <header className="tv-panel rounded-xl">
-        <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-accent)]">Strategy guide</p>
-        <h1 className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">
-          Protective collars: fence in gains without paying full price for insurance
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-          A collar combines two trades you may already know: sell a covered call above the stock price, and use that
-          premium to buy a protective put below it. The result is a position with both a floor and a ceiling —
-          useful after a stock you own has already run up and you want to protect the gain cheaply.
-        </p>
-      </header>
-
+    <ReferenceArticle
+      eyebrow="Strategy guide"
+      h1="Protective collars: fence in gains without paying full price for insurance"
+      leadAnswer={leadAnswer}
+      canonicalPath="/learn/protective-collars"
+      title={title}
+      description={description}
+      published="2026-09-01"
+      updated="2026-09-02"
+      breadcrumbLabel="Protective collars"
+      risks={[
+        "The call strike caps upside just like a plain covered call -- a strong rally past it still leaves the same gain on the table.",
+        "Between the two strikes, a collar behaves like plain stock ownership plus a small net premium adjustment -- it doesn't add income the way a standalone covered call does over multiple cycles.",
+        "Assignment on the short call can happen before expiration, especially near a dividend date, unwinding the structure sooner than planned.",
+      ]}
+      references={["The Options Clearing Corporation (OCC)", "Cboe Options Institute"]}
+      faq={[
+        {
+          question: "Is a collar the same as a covered call plus a protective put?",
+          answer: "Yes -- that's exactly what it is, opened as one combined position rather than two separate trades, usually sized so the call's premium offsets most or all of the put's cost.",
+        },
+        {
+          question: "Why not just buy the put alone, without selling the call?",
+          answer: "A standalone protective put costs full price and doesn't cap the upside. A collar is cheaper (sometimes a net credit) specifically because you're giving up gains above the call strike to help pay for it.",
+        },
+        {
+          question: "Does the collar protect the original cost basis or today's price?",
+          answer: "Whichever the put strike is set relative to -- the strikes are chosen independently of cost basis, so the actual floor is the put strike, adjusted by the net premium, not automatically today's price or the original purchase price.",
+        },
+      ]}
+      related={[
+        { href: "/learn/covered-calls", label: "Covered calls" },
+        { href: "/learn/bear-put-spread", label: "Bear put spread" },
+        { href: "/learn/defined-risk-vs-undefined-risk", label: "Defined-risk vs. undefined-risk" },
+      ]}
+    >
       <section className="tv-panel rounded-xl">
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">The mechanics</h2>
         <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
@@ -120,9 +120,9 @@ export default function ProtectiveCollarsPage() {
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">A worked example</h2>
         <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
           Illustrative numbers, not live quotes — for that, see the{" "}
-          <Link href="/ideas" className="text-[var(--text-accent)] underline underline-offset-2">
+          <a href="/ideas" className="text-[var(--text-accent)] underline underline-offset-2">
             ideas
-          </Link>{" "}
+          </a>{" "}
           page, which prices collars from a real, current option chain.
         </p>
         <div className="mt-3 overflow-x-auto">
@@ -177,26 +177,6 @@ export default function ProtectiveCollarsPage() {
           </div>
         </div>
       </section>
-
-      <aside className="rounded-xl border border-[rgba(211,139,44,0.35)] bg-[rgba(211,139,44,0.12)] px-5 py-4 text-sm leading-6 text-[#f1c27a]">
-        For educational purposes only. Options trading involves significant risk of loss. Consult a qualified
-        financial advisor before trading.
-      </aside>
-
-      <div className="flex flex-wrap gap-3">
-        <Link
-          href="/ideas"
-          className="inline-flex rounded-lg border border-[var(--text-accent)] bg-[rgba(76,141,255,0.18)] px-5 py-3 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[rgba(76,141,255,0.28)]"
-        >
-          See real collar ideas
-        </Link>
-        <Link
-          href="/learn/covered-calls"
-          className="tv-chip inline-flex rounded-lg px-5 py-3 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--tv-surface-3)]"
-        >
-          Back to covered calls
-        </Link>
-      </div>
-    </div>
+    </ReferenceArticle>
   );
 }
